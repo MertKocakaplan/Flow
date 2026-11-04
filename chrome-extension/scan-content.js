@@ -80,7 +80,8 @@ const buttons=new Map();
 const root=document.createElement('div'); root.id='flow-media-tools';
 const shadow=root.attachShadow({mode:'closed'});
 const style=document.createElement('style');
-style.textContent=':host{all:initial}button{position:fixed;z-index:2147483646;font:600 12px/1.4 system-ui,sans-serif;color:#fff;background:#086b62;border:1px solid #fff;border-radius:6px;padding:9px 12px;cursor:pointer;box-shadow:0 2px 8px #0005;max-width:170px}button:focus-visible{outline:3px solid #fff;outline-offset:2px}button[hidden]{display:none!important}';
+// Afiş ızgarası on the page's video: a square cobalt plate (Theme.cs Accent) with a white frame, so it reads on any picture.
+style.textContent=':host{all:initial}button{position:fixed;z-index:2147483646;font:600 12.5px/1.3 Bahnschrift,"Segoe UI",system-ui,sans-serif;color:#ffffff;background:#1f3fd1;border:1px solid #ffffff;border-radius:0;padding:8px 12px;cursor:pointer;max-width:170px}button:hover{background:#1a35b3}button:active{background:#152b91}button:focus-visible{outline:3px solid #ffffff;outline-offset:2px}button[hidden]{display:none!important}';
 shadow.append(style);
 function send(message){try{chrome.runtime.sendMessage(message).catch(()=>{});}catch{stop();}}
 function position(){for(const [video,button] of buttons){if(!video.isConnected){button.remove();buttons.delete(video);continue;}const r=video.getBoundingClientRect();button.hidden=!enabled||!overlays||r.width<180||r.height<100||r.bottom<0||r.top>innerHeight;button.style.left=Math.max(4,Math.min(innerWidth-174,r.right-174))+'px';button.style.top=Math.max(4,r.top+10)+'px';}}

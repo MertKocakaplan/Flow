@@ -52,3 +52,11 @@ test('panel.css has no colour literals outside the palette blocks',()=>{
 test('panel.css follows Windows high contrast',()=>{
   assert.match(css,/@media \(forced-colors: active\)/);
 });
+test('video button colours come from the Theme palette',()=>{
+  const body=readFileSync(new URL('../../chrome-extension/content-body.js',import.meta.url),'utf8');
+  const all=new Set([...light,...dark].map(v=>v.toLowerCase()));
+  const expand=h=>h.length===4||h.length===5?'#'+[...h.slice(1)].map(c=>c+c).join(''):h;
+  const foreign=[...body.matchAll(/#[0-9a-f]{3,8}\b/gi)].map(m=>expand(m[0].toLowerCase())).filter(h=>!all.has(h));
+  assert.deepEqual(foreign,[]);
+  assert.doesNotMatch(body,/rgba?\(|hsla?\(/);
+});
