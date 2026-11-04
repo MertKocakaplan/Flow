@@ -121,13 +121,20 @@ footer button { font-size: 12px; }
 .media-row { position: relative; border-bottom: 1px solid var(--border); padding: 10px 0; margin: 0; }
 .media-row h2 { font-size: 14px; line-height: 1.4; margin: 0; }
 .media-row .check { align-items: flex-start; }
-.media-row .meta { font-size: 12px; font-variant-numeric: tabular-nums; color: var(--text-muted); overflow-wrap: anywhere; margin: 4px 0; }
+.media-row .meta { font-size: 12px; font-variant-numeric: tabular-nums; color: var(--text-muted); overflow-wrap: anywhere; margin: 4px 0 4px 26px; }
 .media-row .actions { display: flex; gap: 8px; align-items: center; margin-top: 6px; }
 .media-row .actions button { font-size: 12px; min-height: 32px; padding: 4px 10px; }
 .media-row details { margin-top: 8px; font-size: 12px; }
 .media-row summary { cursor: pointer; color: var(--accent-text); padding: 4px 0; font-family: var(--display); font-weight: 600; }
 .media-row img, .media-row video { display: block; width: 100%; max-height: 220px; object-fit: contain; margin-top: 8px; background: var(--surface2); }
 .media-row audio { width: 100%; margin-top: 8px; }
+/* Meta, actions and preview hang on the title's line, not under the checkbox. */
+.media-row > :not(label) { margin-left: 26px; }
+.media-row:has(input:disabled) h2 { color: var(--text-muted); }
+.media-row .error { color: var(--danger); }
+#batchSection { background: transparent; color: var(--text); padding: 12px 0 0; border-top: 2px solid var(--border-strong); }
+#batchSection h2 { font-size: 15px; }
+#batchResults .error { color: var(--danger); }
 .batch-actions { padding-top: 12px; margin-top: 4px; }
 .batch-actions > .primary { width: 100%; }
 .batch-actions p { margin-bottom: 0; }
