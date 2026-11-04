@@ -823,11 +823,13 @@
         </Grid>
       </ScrollViewer>
 
-      <!-- History page -->
+      <!-- History page: the same row language as the queue; the numeral column carries the day each file was made. -->
       <ScrollViewer x:Name="HistoryPage" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed" Focusable="False">
-        <StackPanel MaxWidth="1000" Margin="32,4,26,28">
-          <TextBlock Style="{StaticResource PageSub}" Text="{DynamicResource s.hist.subtitle}"/>
-          <Grid Margin="0,0,0,8">
+        <Grid Margin="32,0,26,28">
+          <Grid.ColumnDefinitions><ColumnDefinition Width="52"/><ColumnDefinition Width="*" MaxWidth="1000"/><ColumnDefinition Width="0.001*"/></Grid.ColumnDefinitions>
+          <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+          <TextBlock Grid.ColumnSpan="2" Style="{StaticResource PageSub}" Text="{DynamicResource s.hist.subtitle}"/>
+          <Grid Grid.Row="1" Grid.ColumnSpan="2" Margin="0,0,0,4">
             <Grid.ColumnDefinitions><ColumnDefinition MinWidth="200"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
             <TextBox x:Name="HistorySearch" Tag="{DynamicResource s.hist.search}" AutomationProperties.Name="{DynamicResource s.hist.search}" Margin="0,0,8,8"/>
             <WrapPanel Grid.Column="1">
@@ -853,44 +855,53 @@
               </ComboBox>
             </WrapPanel>
           </Grid>
-          <Grid Margin="0,0,0,10">
+          <Grid Grid.Row="2" Grid.ColumnSpan="2" Margin="0,0,0,8">
             <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-            <TextBlock x:Name="HistoryCount" Style="{StaticResource Hint}" VerticalAlignment="Center"/>
+            <TextBlock x:Name="HistoryCount" Style="{StaticResource Figures}" Foreground="{DynamicResource TextMuted}" FontSize="13" VerticalAlignment="Center"/>
             <Button x:Name="ClearHistoryButton" Grid.Column="1" Style="{StaticResource Ghost}" Content="{DynamicResource s.hist.clear}" ToolTip="{DynamicResource s.hist.clear.tip}"/>
           </Grid>
-          <Border x:Name="HistoryEmpty" Style="{StaticResource Card}"><TextBlock x:Name="HistoryEmptyText" Style="{StaticResource Hint}" Text="{DynamicResource s.hist.empty}"/></Border>
-          <ItemsControl x:Name="HistoryList" Focusable="False" AutomationProperties.Name="{DynamicResource s.hist.title}">
-            <ItemsControl.ItemTemplate><DataTemplate>
-              <Border Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="12" Padding="16,12" Margin="0,0,0,8">
-                <Grid>
-                  <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                  <StackPanel>
-                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                    <TextBlock Text="{Binding Summary}" Foreground="{DynamicResource TextMuted}" FontSize="12.5" Margin="0,4,0,0" TextWrapping="Wrap"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                      <Border x:Name="StatusChip" CornerRadius="10" Padding="8,1" Background="{DynamicResource Surface2}" Margin="0,0,8,0" VerticalAlignment="Center">
-                        <TextBlock x:Name="StatusLabel" Text="{Binding StatusText}" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource TextMuted}"/>
-                      </Border>
-                      <TextBlock Text="{Binding PathText}" Foreground="{DynamicResource TextFaint}" FontSize="11.5" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" MaxWidth="560"/>
+          <Border x:Name="HistoryEmpty" Grid.Row="3" Grid.Column="1" Style="{StaticResource Card}"><TextBlock x:Name="HistoryEmptyText" Style="{StaticResource Hint}" Text="{DynamicResource s.hist.empty}"/></Border>
+          <Border Grid.Row="4" Grid.ColumnSpan="2">
+            <Border.Style><Style TargetType="Border"><Setter Property="BorderBrush" Value="{DynamicResource BorderStrong}"/><Setter Property="BorderThickness" Value="0,2,0,0"/>
+              <Style.Triggers><DataTrigger Binding="{Binding HasItems, ElementName=HistoryList}" Value="False"><Setter Property="BorderThickness" Value="0"/></DataTrigger></Style.Triggers></Style></Border.Style>
+            <ItemsControl x:Name="HistoryList" Focusable="False" AutomationProperties.Name="{DynamicResource s.hist.title}">
+              <ItemsControl.ItemTemplate><DataTemplate>
+                <Border BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1">
+                  <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="52"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <TextBlock x:Name="Figure" Text="{Binding DayText}" Style="{StaticResource Figures}" FontSize="15" FontWeight="Normal" Foreground="{DynamicResource TextMuted}" Margin="0,13,0,0" VerticalAlignment="Top"/>
+                    <StackPanel Grid.Column="1" Margin="0,12,0,12">
+                      <TextBlock Text="{Binding Title}" FontFamily="{StaticResource Display}" FontWeight="SemiBold" FontSize="15" TextTrimming="CharacterEllipsis"/>
+                      <WrapPanel Margin="0,4,0,0">
+                        <Border x:Name="SourceKey" Width="9" Height="9" Margin="0,0,7,0" VerticalAlignment="Center" Background="{DynamicResource SourceOther}"/>
+                        <TextBlock Text="{Binding Summary}" Foreground="{DynamicResource TextMuted}" FontSize="12.5" Margin="0,0,10,0" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                        <Border x:Name="StatusChip" Padding="7,1" Background="{DynamicResource Surface2}" VerticalAlignment="Center">
+                          <TextBlock x:Name="StatusLabel" Text="{Binding StatusText}" FontFamily="{StaticResource Display}" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource TextMuted}"/>
+                        </Border>
+                      </WrapPanel>
+                      <TextBlock Text="{Binding PathText}" Style="{StaticResource AutoHide}" Foreground="{DynamicResource TextFaint}" FontSize="12" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Margin="0,5,0,0"/>
+                      <TextBlock Text="{Binding ErrorText}" Style="{StaticResource AutoHide}" Foreground="{DynamicResource Danger}" Margin="0,6,0,0"/>
                     </StackPanel>
-                    <TextBlock Text="{Binding ErrorText}" Style="{StaticResource AutoHide}" Foreground="{DynamicResource Danger}" Margin="0,6,0,0"/>
-                  </StackPanel>
-                  <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top" Margin="12,-4,-6,0">
-                    <Button Style="{StaticResource IconButton}" Tag="reveal" Content="&#xE838;" ToolTip="{DynamicResource s.common.reveal}" AutomationProperties.Name="{DynamicResource s.common.reveal}" Visibility="{Binding CanReveal, Converter={StaticResource Vis}}"/>
-                    <Button Style="{StaticResource IconButton}" Tag="source" Content="&#xE71B;" ToolTip="{DynamicResource s.hist.source}" AutomationProperties.Name="{DynamicResource s.hist.source}" Visibility="{Binding HasSource, Converter={StaticResource Vis}}"/>
-                    <Button Style="{StaticResource IconButton}" Tag="requeue" Content="&#xE72C;" ToolTip="{DynamicResource s.hist.requeue}" AutomationProperties.Name="{DynamicResource s.hist.requeue}" Visibility="{Binding HasSource, Converter={StaticResource Vis}}"/>
-                    <Button Style="{StaticResource IconButton}" Tag="forget" Content="&#xE74D;" ToolTip="{DynamicResource s.hist.forget}" AutomationProperties.Name="{DynamicResource s.hist.forget}"/>
-                  </StackPanel>
-                </Grid>
-              </Border>
-              <DataTemplate.Triggers>
-                <DataTrigger Binding="{Binding Kind}" Value="done"><Setter TargetName="StatusChip" Property="Background" Value="{DynamicResource SuccessSoft}"/><Setter TargetName="StatusLabel" Property="Foreground" Value="{DynamicResource Success}"/></DataTrigger>
-                <DataTrigger Binding="{Binding Kind}" Value="error"><Setter TargetName="StatusChip" Property="Background" Value="{DynamicResource DangerSoft}"/><Setter TargetName="StatusLabel" Property="Foreground" Value="{DynamicResource Danger}"/></DataTrigger>
-                <DataTrigger Binding="{Binding Kind}" Value="missing"><Setter TargetName="StatusChip" Property="Background" Value="{DynamicResource WarningSoft}"/><Setter TargetName="StatusLabel" Property="Foreground" Value="{DynamicResource Warning}"/></DataTrigger>
-              </DataTemplate.Triggers>
-            </DataTemplate></ItemsControl.ItemTemplate>
-          </ItemsControl>
-        </StackPanel>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Top" Margin="12,8,-6,0">
+                      <Button Style="{StaticResource IconButton}" Tag="reveal" Content="&#xE838;" ToolTip="{DynamicResource s.common.reveal}" AutomationProperties.Name="{DynamicResource s.common.reveal}" Visibility="{Binding CanReveal, Converter={StaticResource Vis}}"/>
+                      <Button Style="{StaticResource IconButton}" Tag="source" Content="&#xE71B;" ToolTip="{DynamicResource s.hist.source}" AutomationProperties.Name="{DynamicResource s.hist.source}" Visibility="{Binding HasSource, Converter={StaticResource Vis}}"/>
+                      <Button Style="{StaticResource IconButton}" Tag="requeue" Content="&#xE72C;" ToolTip="{DynamicResource s.hist.requeue}" AutomationProperties.Name="{DynamicResource s.hist.requeue}" Visibility="{Binding HasSource, Converter={StaticResource Vis}}"/>
+                      <Button Style="{StaticResource IconButton}" Tag="forget" Content="&#xE74D;" ToolTip="{DynamicResource s.hist.forget}" AutomationProperties.Name="{DynamicResource s.hist.forget}"/>
+                    </StackPanel>
+                  </Grid>
+                </Border>
+                <DataTemplate.Triggers>
+                  <DataTrigger Binding="{Binding Kind}" Value="done"><Setter TargetName="StatusChip" Property="Background" Value="{DynamicResource SuccessSoft}"/><Setter TargetName="StatusLabel" Property="Foreground" Value="{DynamicResource Success}"/></DataTrigger>
+                  <DataTrigger Binding="{Binding Kind}" Value="error"><Setter TargetName="StatusChip" Property="Background" Value="{DynamicResource DangerSoft}"/><Setter TargetName="StatusLabel" Property="Foreground" Value="{DynamicResource Danger}"/></DataTrigger>
+                  <DataTrigger Binding="{Binding Kind}" Value="missing"><Setter TargetName="StatusChip" Property="Background" Value="{DynamicResource WarningSoft}"/><Setter TargetName="StatusLabel" Property="Foreground" Value="{DynamicResource Warning}"/></DataTrigger>
+                  <DataTrigger Binding="{Binding PlatformKey}" Value="YouTube"><Setter TargetName="SourceKey" Property="Background" Value="{DynamicResource SourceYouTube}"/></DataTrigger>
+                  <DataTrigger Binding="{Binding PlatformKey}" Value="Instagram"><Setter TargetName="SourceKey" Property="Background" Value="{DynamicResource SourceInstagram}"/></DataTrigger>
+                  <DataTrigger Binding="{Binding PlatformKey}" Value="TikTok"><Setter TargetName="SourceKey" Property="Background" Value="{DynamicResource SourceTikTok}"/></DataTrigger>
+                </DataTemplate.Triggers>
+              </DataTemplate></ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </Border>
+        </Grid>
       </ScrollViewer>
 
       <!-- Settings page -->

@@ -69,6 +69,26 @@ namespace FlowTests {
             ShellChecks();
             DownloadChecks();
             QueueChecks();
+            HistoryChecks();
+        }
+
+        static void HistoryChecks() {
+            var paths = NewPaths("ui-redesign-history");
+            var s = SettingsRules.Defaults(paths); s.Language = "tr"; s.Theme = "light"; s.Notify = false;
+            Store.SaveSettings(paths, s);
+            Store.SaveHistory(paths, ShotHistory(paths));
+            var c = Open(paths, 1180, 840, new FakeExecutor());
+            var w = c.Window;
+            c.ShowPage("history"); Pump();
+            var list = Find<ItemsControl>(w, "HistoryList");
+            var youtube = c.HistoryRows.First(r => r.Entry.Platform == "YouTube");
+            var day = TemplatePart<TextBlock>(list, youtube, "Figure");
+            var expected = Iso.Parse(youtube.Entry.CompletedAt).Value.ToLocalTime().ToString("dd.MM", Loc.Culture);
+            T.Check(day != null && day.Text == expected, "Geçmiş: rakam sütununda tamamlanma günü (" + (day == null ? "yok" : day.Text) + ")");
+            var key = TemplatePart<Border>(list, youtube, "SourceKey");
+            T.Check(key != null && key.Background.ToString() == w.Resources["SourceYouTube"].ToString(), "Geçmiş: kaynak karesi kaydın kaynağının rengini alıyor");
+            PageFits(c, "HistoryPage", "Geçmiş");
+            w.Close();
         }
 
         static T TemplatePart<T>(ItemsControl list, object item, string name) where T : class {

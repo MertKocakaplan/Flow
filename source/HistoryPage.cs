@@ -31,6 +31,9 @@ namespace Flow {
         }
         public string Kind { get { return Entry.Status == "failed" ? "error" : (Entry.Status == "completed" || Entry.Status == "skipped") && !Exists ? "missing" : Entry.Status == "completed" || Entry.Status == "skipped" ? "done" : "muted"; } }
         public string StatusText { get { return Kind == "missing" ? Loc.T("hist.missing") : Loc.Has("hist.st." + Entry.Status) ? Loc.T("hist.st." + Entry.Status) : Entry.Status; } }
+        // Display only: the day the file was made for the numeral column, and the source for its colour key.
+        public string DayText { get { var at = Iso.Parse(Entry.CompletedAt); return at.HasValue ? at.Value.ToLocalTime().ToString("dd.MM", Loc.Culture) : "—"; } }
+        public string PlatformKey { get { return Entry.Platform ?? ""; } }
         public string PathText { get { return !string.IsNullOrEmpty(Entry.FilePath) ? Entry.FilePath : Entry.SourceUrl == null ? Loc.T("hist.noSource") : ""; } }
         public string ErrorText { get { ErrorCode code; return Entry.Status == "failed" && Enum.TryParse(Entry.Error ?? "", out code) ? Loc.Error(code) : ""; } }
         public bool CanReveal { get { return Exists; } }
