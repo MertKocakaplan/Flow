@@ -143,6 +143,16 @@ footer button { font-size: 12px; }
 #batchResults p { font-size: 12px; margin: 6px 0; overflow-wrap: anywhere; }
 #scanPage { overflow-wrap: anywhere; }
 
+/* Setup and help: a reading page with the same band; the steps hang on the numeral column. */
+body.setup header .tagline { color: var(--sidebar-muted); font: 600 13px/1.4 var(--display); }
+body.setup main { max-width: 760px; padding: 24px 24px 48px; }
+body.setup h1 { font-size: 28px; margin-bottom: 4px; }
+body.setup h2 { font-size: 18px; margin: 32px 0 8px; padding-top: 12px; border-top: 2px solid var(--border-strong); }
+body.setup p { line-height: 1.6; }
+body.setup ol { list-style: none; counter-reset: step; padding: 0; margin: 20px 0; border-top: 2px solid var(--border-strong); }
+body.setup li { counter-increment: step; position: relative; padding: 12px 0 12px 52px; border-bottom: 1px solid var(--border); line-height: 1.6; }
+body.setup li::before { content: counter(step); position: absolute; left: 0; top: 8px; font: 300 30px/1.1 var(--display); font-variant-numeric: tabular-nums; }
+body.setup strong[translate="no"] { font-family: var(--display); font-weight: 600; }
 @media (max-width: 340px) {
   header, main, .connection, nav, footer { padding-left: 14px; padding-right: 14px; }
   nav { gap: 12px; } .tab { font-size: 12px; } .row { gap: 6px; } button { padding: 8px; }

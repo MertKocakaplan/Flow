@@ -7,7 +7,7 @@ Write-Output 'Built isolated media scanner.'
 # Opera uses a popup/full-tab panel when Chrome's sidePanel API is unavailable.
 $opera = Join-Path (Split-Path -Parent $PSScriptRoot) 'opera-extension'
 New-Item -ItemType Directory -Path $opera -Force | Out-Null
-$production = @('background.js','transport.js','panel.js','panel.html','panel.css','i18n.js','setup.html','detection.js','discovery.js','media-panel.js','scan-content.js','package.json')
+$production = @('background.js','transport.js','panel.js','panel.html','panel.css','i18n.js','setup.html','setup.js','detection.js','discovery.js','media-panel.js','scan-content.js','package.json')
 foreach($file in $production){Copy-Item -LiteralPath (Join-Path $extension $file) -Destination (Join-Path $opera $file) -Force}
 Copy-Item -LiteralPath (Join-Path $extension 'icons') -Destination $opera -Recurse -Force
 $manifest = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $extension 'manifest.json') | ConvertFrom-Json
