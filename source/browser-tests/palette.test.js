@@ -60,3 +60,8 @@ test('video button colours come from the Theme palette',()=>{
   assert.deepEqual(foreign,[]);
   assert.doesNotMatch(body,/rgba?\(|hsla?\(/);
 });
+test('panel.css turns motion off for reduced motion and never transitions everything',()=>{
+  assert.match(css,/@media \(prefers-reduced-motion: reduce\)/);
+  assert.doesNotMatch(css,/transition\s*:\s*all|transition-property\s*:\s*all/);
+  assert.match(css,/transition-property:/);
+});

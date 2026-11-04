@@ -65,6 +65,7 @@ namespace Flow {
             this.paths = paths; this.state = state; settings = state.Settings; history = state.History;
             Loc.Set(settings.Language);
             Theme.Set(settings.Theme);
+            if (Application.Current != null) Motion.Install(Application.Current.Resources);   // storyboards read these at load
             using (var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("MainWindow.xaml")) Window = (Window)XamlReader.Load(stream);
             Theme.Attach(Window);
             Loc.Attach(Window);
@@ -119,7 +120,13 @@ namespace Flow {
         public void ShowPage(string name) {
             page = name;
             var map = new Dictionary<string, string> { { "download", "DownloadPage" }, { "queue", "QueuePage" }, { "history", "HistoryPage" }, { "settings", "SettingsPage" } };
-            foreach (var pair in map) { var element = C<UIElement>(pair.Value); if (element != null) element.Visibility = pair.Key == name ? Visibility.Visible : Visibility.Collapsed; }
+            foreach (var pair in map) {
+                var element = C<UIElement>(pair.Value);
+                if (element == null) continue;
+                bool show = pair.Key == name, appearing = show && element.Visibility != Visibility.Visible;
+                element.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+                if (appearing) Motion.Reveal(element);
+            }
             var nav = C<RadioButton>("Nav" + char.ToUpperInvariant(name[0]) + name.Substring(1));
             if (nav != null && nav.IsChecked != true) nav.IsChecked = true;
             // The header carries the page title; it follows language changes through the resource reference.

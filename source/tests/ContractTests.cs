@@ -16,6 +16,17 @@ namespace FlowTests {
             XamlNames();
             XamlColorLiterals();
             FocusStates();
+            MotionDurations();
+        }
+
+        // Storyboards read their durations from resources; with Windows animations off they are zero.
+        // The UI tests run with motion off so screenshots show settled states.
+        static void MotionDurations() {
+            var d = new System.Windows.ResourceDictionary();
+            Motion.Enabled = true; Motion.Install(d);
+            T.Check(((System.Windows.Duration)d["MotionFast"]).TimeSpan.TotalMilliseconds == 120 && ((System.Windows.Duration)d["MotionMedium"]).TimeSpan.TotalMilliseconds == 200, "hareket süreleri 120/200 ms");
+            Motion.Enabled = false; Motion.Install(d);
+            T.Check(((System.Windows.Duration)d["MotionFast"]).TimeSpan == TimeSpan.Zero && ((System.Windows.Duration)d["MotionMedium"]).TimeSpan == TimeSpan.Zero, "animasyonlar kapalıyken hareket süresi sıfır");
         }
 
         static string Detail(List<string> items) { return items.Count == 0 ? "" : ": " + string.Join(", ", items.Take(12)); }

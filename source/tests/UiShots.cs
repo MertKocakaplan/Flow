@@ -76,6 +76,19 @@ namespace FlowTests {
             HistoryChecks();
             SettingsChecks();
             CloseChecks();
+            MotionChecks();
+        }
+
+        static void MotionChecks() {
+            var c = OpenWith("ui-redesign-motion", "light", 1180, 840);
+            var w = c.Window;
+            Motion.Enabled = true;
+            c.ShowPage("queue");
+            T.Check(Find<ScrollViewer>(w, "QueuePage").HasAnimatedProperties, "sayfa geçişi kısa bir saydamlık geçişiyle");
+            Motion.Enabled = false;
+            c.ShowPage("history");
+            T.Check(!Find<ScrollViewer>(w, "HistoryPage").HasAnimatedProperties && Find<ScrollViewer>(w, "HistoryPage").Opacity == 1, "Windows animasyonları kapalıyken sayfa geçişi anında");
+            w.Close();
         }
 
         static void CloseChecks() {

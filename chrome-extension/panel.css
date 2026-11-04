@@ -153,6 +153,16 @@ body.setup ol { list-style: none; counter-reset: step; padding: 0; margin: 20px 
 body.setup li { counter-increment: step; position: relative; padding: 12px 0 12px 52px; border-bottom: 1px solid var(--border); line-height: 1.6; }
 body.setup li::before { content: counter(step); position: absolute; left: 0; top: 8px; font: 300 30px/1.1 var(--display); font-variant-numeric: tabular-nums; }
 body.setup strong[translate="no"] { font-family: var(--display); font-weight: 600; }
+/* Motion and finish: 120 ms on named properties only, press gives way to 0.96 except full-width buttons. */
+button, .tab, a { transition-property: background-color, color, border-color, transform; transition-duration: 120ms; transition-timing-function: cubic-bezier(0.2, 0, 0, 1); }
+button:active:not(:disabled) { transform: scale(0.96); }
+.batch-actions > .primary:active:not(:disabled), .tab:active:not(:disabled) { transform: none; }
+h1, h2 { text-wrap: balance; }
+p, li { text-wrap: pretty; }
+.media-row img, .media-row video { outline: 1px solid oklch(0 0 0 / 0.1); outline-offset: -1px; }
+:root[data-theme="dark"] .media-row img, :root[data-theme="dark"] .media-row video { outline-color: oklch(1 0 0 / 0.1); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .media-row img, :root:not([data-theme="light"]) .media-row video { outline-color: oklch(1 0 0 / 0.1); } }
+@media (prefers-reduced-motion: reduce) { *, ::before, ::after { transition-duration: 0ms !important; animation: none !important; } button:active:not(:disabled) { transform: none; } }
 @media (max-width: 340px) {
   header, main, .connection, nav, footer { padding-left: 14px; padding-right: 14px; }
   nav { gap: 12px; } .tab { font-size: 12px; } .row { gap: 6px; } button { padding: 8px; }
