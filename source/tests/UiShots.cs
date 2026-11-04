@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Flow;
@@ -279,7 +280,7 @@ namespace FlowTests {
         static void Resize(Window window, double width, double height) { window.Width = width; window.Height = height; Pump(); window.UpdateLayout(); Pump(); }
 
         // The rail's ASCII field: behind the navigation, never taking input, quiet where the labels are,
-        // alive only under the pointer and for a moment after a click, still with Windows animations off.
+        // rising from the foot and thinning upward, drifting by itself, deaf to the pointer, still with animations off.
         static void RailFieldChecks() {
             foreach (var size in ShotSizes) {
                 var c = OpenWith("ui-redesign-rail-" + size[0], "light", size[0], size[1]);
@@ -293,34 +294,55 @@ namespace FlowTests {
                     return field.AlphaAt(center) <= 0.02;
                 });
                 T.Check(quiet, "ray efekti gezinme yazılarının arkasında boş (" + size[0] + ")");
-                var low = new Point(field.ActualWidth / 2, field.ActualHeight * 0.85);
-                T.Check(field.AlphaAt(low) > 0.02 && field.AlphaAt(low) <= 0.32, "ray efekti alt bölümde hafifçe görünüyor (" + field.AlphaAt(low).ToString("0.00") + ")");
+                // Rises from the bottom and thins out as it climbs: each band up is fainter than the one below.
+                Func<double, double, double> band = (from, to) => {
+                    double sum = 0; int n = 0;
+                    double span = field.ActualHeight - field.FieldTop;
+                    for (double y = field.ActualHeight - span * to; y < field.ActualHeight - span * from; y += 7)
+                        for (double x = 2; x < field.ActualWidth; x += 4.2) { sum += field.AlphaAt(new Point(x, y)); n++; }
+                    return n == 0 ? 0 : sum / n;
+                };
+                double foot = band(0.12, 0.35), middle = band(0.35, 0.58), upper = band(0.58, 0.8);   // the foot starts above the version line
+                T.Check(foot > middle && middle > upper && upper > 0.002, "ray efekti aşağıdan yukarı giderek saydamlaşıyor (" + foot.ToString("0.000") + " > " + middle.ToString("0.000") + " > " + upper.ToString("0.000") + ")");
+                double peak = 0;
+                for (double y = 0; y < field.ActualHeight; y += 7) for (double x = 2; x < field.ActualWidth; x += 4.2) peak = Math.Max(peak, field.AlphaAt(new Point(x, y)));
+                T.Check(peak > 0.1 && peak <= 0.35, "ray efekti hafif kalıyor (en koyu " + peak.ToString("0.00") + ")");
+                T.Check(!field.IsAnimating, "Windows animasyonları kapalıyken ray efekti durgun (" + size[0] + ")");
                 if (size[0] == 1180) {
-                    Motion.Enabled = false;
-                    field.Trail(new Point(40, 300));
-                    T.Check(!field.IsAnimating, "Windows animasyonları kapalıyken ray efekti durgun");
+                    // The pointer no longer feeds the field.
+                    var before = band(0, 1);
+                    var raise = new MouseEventArgs(Mouse.PrimaryDevice, 0) { RoutedEvent = UIElement.MouseMoveEvent };
+                    rail.RaiseEvent(raise);
+                    T.Check(Math.Abs(band(0, 1) - before) < 1e-9 && !field.IsAnimating, "ray efekti fareye tepki vermiyor");
+                    // Runs by itself once animations are on, and moves gently: no cell jumps between two frames.
                     Motion.Enabled = true;
-                    var spot = new Point(40, 120);
-                    field.Trail(spot);
-                    T.Check(field.IsAnimating && field.AlphaAt(spot) > 0.05, "fare izi karakterleri karıştırıyor");
-                    // Smooth: next to the pointer a cell fades out once; it never blinks off and on frame by frame.
-                    var near = new Point(spot.X + 14, spot.Y);
-                    var seen = new List<double>();
-                    for (int i = 0; i < 20; i++) { seen.Add(field.AlphaAt(near)); field.Advance(1 / 60.0); }
-                    bool smooth = seen[0] > 0.05; for (int i = 1; i < seen.Count; i++) if (seen[i] > seen[i - 1] + 0.001) smooth = false;
-                    T.Check(smooth, "fare izi pürüzsüz söner, yanıp sönmez (" + string.Join(" ", seen.Take(8).Select(v => v.ToString("0.00"))) + ")");
-                    field.Advance(2.5);
-                    T.Check(!field.IsAnimating && field.AlphaAt(spot) <= 0.02, "iz kısa sürede sönüp efekt duruyor");
-                    // Continuous: a fast move leaves no gap between two pointer events.
-                    field.Trail(new Point(30, 140)); field.Trail(new Point(30, 240));
-                    T.Check(field.AlphaAt(new Point(30, 190)) > 0.05, "hızlı harekette iz kopmuyor");
-                    field.Advance(2.5);
-                    field.Wave(new Point(60, 400));
-                    field.Advance(0.3);
-                    T.Check(field.IsAnimating, "tıklama dalgası yayılıyor");
+                    field.Start();
+                    T.Check(field.IsAnimating, "ray efekti kendiliğinden çalışıyor");
                     field.Advance(2);
-                    T.Check(!field.IsAnimating, "dalga sönüp efekt duruyor");
+                    var cells = new List<Point>();
+                    for (double y = field.ActualHeight * 0.5; y < field.ActualHeight; y += 14) for (double x = 4; x < field.ActualWidth; x += 8.4) cells.Add(new Point(x, y));
+                    var then = cells.Select(p => field.AlphaAt(p)).ToArray();
+                    double jump = 0, moved = 0;
+                    for (int f = 0; f < 30; f++) {
+                        field.Advance(1 / 30.0);
+                        var now = cells.Select(p => field.AlphaAt(p)).ToArray();
+                        for (int i = 0; i < now.Length; i++) { jump = Math.Max(jump, Math.Abs(now[i] - then[i])); }
+                        then = now;
+                    }
+                    var start = cells.Select(p => field.AlphaAt(p)).ToArray();
+                    field.Advance(1.5);
+                    for (int i = 0; i < cells.Count; i++) moved += Math.Abs(field.AlphaAt(cells[i]) - start[i]);
+                    T.Check(jump < 0.07, "ray efekti kareler arasında yumuşak değişiyor (en büyük sıçrama " + jump.ToString("0.000") + ")");
+                    T.Check(moved / cells.Count > 0.004, "ray efekti yavaşça yukarı akıyor (" + (moved / cells.Count).ToString("0.000") + ")");
+                    var still = new[] { "NavDownload", "NavQueue", "NavHistory", "NavSettings" }.All(n => {
+                        var nav = Find<FrameworkElement>(w, n);
+                        var center = nav.TransformToVisual(field).Transform(new Point(nav.ActualWidth / 2, nav.ActualHeight / 2));
+                        return field.AlphaAt(center) <= 0.02;
+                    });
+                    T.Check(still, "akarken de gezinme yazılarının arkası boş");
                     Motion.Enabled = false;
+                    field.Start();
+                    T.Check(!field.IsAnimating, "animasyonlar kapanınca ray efekti duruyor");
                 }
                 w.Close();
             }

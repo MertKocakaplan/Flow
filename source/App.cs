@@ -69,15 +69,13 @@ namespace Flow {
             using (var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("MainWindow.xaml")) Window = (Window)XamlReader.Load(stream);
             Theme.Attach(Window);
             Loc.Attach(Window);
-            // The rail's ASCII field sits behind the navigation; the pointer feeds its trail, a press its ring.
+            // The rail's ASCII field sits behind the navigation and drifts on its own.
             var rail = C<Border>("Sidebar");
             var navigation = rail.Child; rail.Child = null;
             RailField = new AsciiField();
             var layers = new Grid();
             layers.Children.Add(RailField); layers.Children.Add(navigation);
             rail.Child = layers;
-            rail.MouseMove += (s, e) => RailField.Trail(e.GetPosition(RailField));
-            rail.PreviewMouseLeftButtonDown += (s, e) => RailField.Wave(e.GetPosition(RailField));
             SetWindowIcon();
             loading = true;
             InitNavigation(); InitQueue(executor); InitDownload(); InitHistory(); InitSettings(); InitExtras();
