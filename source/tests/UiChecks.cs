@@ -41,6 +41,7 @@ namespace FlowTests {
             RunLaterStages();
             CloseChoiceUi();
             BrowserTests.Api();
+            RedesignShots();
         }
         static partial void RunLaterStages();
 
