@@ -30,7 +30,7 @@ namespace Flow {
         };
         static readonly string[] Dark = {
             "#0E0F12", "#15171B", "#1C1F24", "#252930", "#2E333B", "#E8EAEE", "#ECEEF2", "#A3A9B4", "#8F96A1",
-            "#FFFFFF", "#3D5CF5", "#5470F7", "#2F4DE0", "#1A2350", "#8FA3FF",
+            "#FFFFFF", "#3D5CF5", "#3654EC", "#2A45CF", "#1A2350", "#8FA3FF",
             "#FF8A80", "#3A1716", "#6FD69A", "#12301E", "#F2B544", "#35280E", "#8DB8F5", "#14243A",
             "#1B2E9A", "#FFFFFF", "#AEBBF5", "#0F1D6E", "#24399F",
             "#8FA3FF", "#2A3A8F", "#111317", "#4A505B", "#3A3F48", "#5A616C", "#1C1F24",

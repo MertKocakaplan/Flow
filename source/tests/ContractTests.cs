@@ -17,6 +17,16 @@ namespace FlowTests {
             XamlColorLiterals();
             FocusStates();
             MotionDurations();
+            HoverContrast();
+        }
+
+        // The primary button keeps readable text while hovered and pressed (Impeccable's detector found 4.2:1).
+        static void HoverContrast() {
+            foreach (var name in new[] { "light", "dark" }) {
+                var p = Theme.Palette(name);
+                double hover = Theme.Contrast(p["OnAccent"], p["AccentHover"]), pressed = Theme.Contrast(p["OnAccent"], p["AccentPressed"]);
+                T.Check(hover >= 4.5 && pressed >= 4.5, name + " theme: accent hover and pressed contrast (" + hover.ToString("0.0") + " / " + pressed.ToString("0.0") + ")");
+            }
         }
 
         // Storyboards read their durations from resources; with Windows animations off they are zero.
