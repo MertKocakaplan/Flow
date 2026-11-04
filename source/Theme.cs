@@ -21,19 +21,20 @@ namespace Flow {
         // Afiş ızgarası: a solid cobalt rail on a pure white ground, near-black ink, hairline rules.
         // Red is kept for errors only; the Source* colours mark a job's source as a small square key.
         static readonly string[] Light = {
-            "#FFFFFF", "#FFFFFF", "#F1F2F4", "#E6E8EC", "#D5D8DE", "#111318", "#111318", "#4A4F5A", "#5F6570",
+            "#FFFFFF", "#FFFFFF", "#F1F2F4", "#E6E8EC", "#D5D8DE", "#3A3F48", "#111318", "#4A4F5A", "#5F6570",
             "#FFFFFF", "#1F3FD1", "#1A35B3", "#152B91", "#E5EAFC", "#1A36B8",
             "#C4161C", "#FDE8E8", "#1C7A3E", "#E3F3E8", "#8F5200", "#FFF1D6", "#20539E", "#E6EEF9",
             "#1F3FD1", "#FFFFFF", "#C9D3FA", "#142C9E", "#2A49DA",
             "#1F3FD1", "#C9D3FA", "#FFFFFF", "#8C929E", "#B9BEC8", "#8C929E", "#ECEEF1",
             "#C8402A", "#A8336F", "#0F7C80", "#8A6300"
         };
+        // Dark: a lifted charcoal ground, softened ink and quiet rules, so text and lines do not glare.
         static readonly string[] Dark = {
-            "#0E0F12", "#15171B", "#1C1F24", "#252930", "#2E333B", "#E8EAEE", "#ECEEF2", "#A3A9B4", "#8F96A1",
-            "#FFFFFF", "#3D5CF5", "#3654EC", "#2A45CF", "#1A2350", "#8FA3FF",
-            "#FF8A80", "#3A1716", "#6FD69A", "#12301E", "#F2B544", "#35280E", "#8DB8F5", "#14243A",
-            "#1B2E9A", "#FFFFFF", "#AEBBF5", "#0F1D6E", "#24399F",
-            "#8FA3FF", "#2A3A8F", "#111317", "#4A505B", "#3A3F48", "#5A616C", "#1C1F24",
+            "#16181C", "#1B1D22", "#23262C", "#2B2F36", "#2A2E35", "#4A505A", "#D3D6DC", "#9CA2AC", "#8B919B",
+            "#FFFFFF", "#3D5CF5", "#3654EC", "#2A45CF", "#1F2754", "#8C9CF0",
+            "#F28B82", "#3A1D1D", "#79C99A", "#183226", "#E9B45A", "#352A14", "#8DB3E8", "#182638",
+            "#1B2E9A", "#E6E9F6", "#AEB9EE", "#0F1D6E", "#24399F",
+            "#8090E6", "#2A3A8F", "#1D2025", "#50565F", "#3A3F48", "#555C67", "#23262C",
             "#E0705C", "#D46AA2", "#3FB2B6", "#C9A13B"
         };
 

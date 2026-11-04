@@ -65,7 +65,7 @@ namespace Flow {
             this.paths = paths; this.state = state; settings = state.Settings; history = state.History;
             Loc.Set(settings.Language);
             Theme.Set(settings.Theme);
-            if (Application.Current != null) Motion.Install(Application.Current.Resources);   // storyboards read these at load
+            if (Application.Current != null) { Motion.Install(Application.Current.Resources); Typefaces.Install(Application.Current.Resources); }   // XAML reads these at load
             using (var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("MainWindow.xaml")) Window = (Window)XamlReader.Load(stream);
             Theme.Attach(Window);
             Loc.Attach(Window);

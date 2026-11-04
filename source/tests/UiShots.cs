@@ -71,6 +71,8 @@ namespace FlowTests {
 
         static void RedesignChecks() {
             ShellChecks();
+            OpenerChecks();
+            TypeChecks();
             DownloadChecks();
             QueueChecks();
             HistoryChecks();
@@ -270,6 +272,42 @@ namespace FlowTests {
         }
 
         static void Resize(Window window, double width, double height) { window.Width = width; window.Height = height; Pump(); window.UpdateLayout(); Pump(); }
+
+        // Sentient (one Regular cut) carries headings and text; Bahnschrift keeps buttons, tabs, the rail and figures.
+        // Sentient text never asks for a heavier weight, which WPF would fake.
+        static void TypeChecks() {
+            var c = OpenWith("ui-redesign-type", "light", 1180, 840);
+            var w = c.Window;
+            LoadPreview(c, null);
+            Func<Control, bool> sentient = x => x.FontFamily.Source.Contains("Sentient");
+            var title = Find<TextBlock>(w, "HeaderEyebrow");
+            T.Check(title.FontFamily.Source.Contains("Sentient") && Find<TextBlock>(w, "VideoTitle").FontFamily.Source.Contains("Sentient") && sentient(Find<TextBox>(w, "UrlBox")),
+                "Sentient sayfa başlığında, video başlığında ve giriş alanında (" + title.FontFamily.Source + ")");
+            T.Check(!sentient(Find<Button>(w, "StartButton")) && Find<Button>(w, "StartButton").FontFamily.Source.Contains("Bahnschrift") && !Find<RadioButton>(w, "NavQueue").FontFamily.Source.Contains("Sentient"),
+                "düğmeler ve ray Bahnschrift'te kalıyor");
+            var faked = new List<string>();
+            foreach (var page in new[] { "download", "queue", "history", "settings" }) {
+                c.ShowPage(page); Pump();
+                faked.AddRange(Visuals(w).OfType<TextBlock>().Where(t => t.IsVisible && t.FontFamily.Source.Contains("Sentient") && t.FontWeight.ToOpenTypeWeight() > 400 && !string.IsNullOrEmpty(t.Text)).Select(t => page + ":" + t.Text));
+            }
+            T.Check(faked.Count == 0, "Sentient yazılarda yapay kalınlık yok" + (faked.Count == 0 ? "" : ": " + string.Join(", ", faked.Distinct().Take(10))));
+            w.Close();
+        }
+
+        // Opener headings follow the theme's text colour (they stayed black on the dark ground).
+        static void OpenerChecks() {
+            var c = OpenWith("ui-redesign-openers", "dark", 1180, 840);
+            var w = c.Window;
+            var wrong = new List<string>();
+            foreach (var name in new[] { "FormatExpander", "SubtitleExpander", "ClipExpander", "ScheduleExpander", "FileExpander" }) {
+                var expander = Find<Expander>(w, name);
+                var header = expander.Template.FindName("HeaderButton", expander) as FrameworkElement;
+                var text = header == null ? null : Visuals(header).OfType<TextBlock>().FirstOrDefault(t => !string.IsNullOrEmpty(t.Text));
+                if (text == null || text.Foreground.ToString() != w.Resources["Text"].ToString()) wrong.Add(name + "=" + (text == null ? "?" : text.Foreground.ToString()));
+            }
+            T.Check(wrong.Count == 0, "açıcı başlıkları koyu temada metin renginde" + (wrong.Count == 0 ? "" : ": " + string.Join(", ", wrong)));
+            w.Close();
+        }
 
         static void ShellChecks() {
             var c = OpenWith("ui-redesign-shell", "light", 1180, 840);

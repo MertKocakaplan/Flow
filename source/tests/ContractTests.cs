@@ -18,6 +18,34 @@ namespace FlowTests {
             FocusStates();
             MotionDurations();
             HoverContrast();
+            SoftContrast();
+            QuietMenus();
+        }
+
+        // Drop-down menus: a filled field with one bottom line, and a soft floating list instead of a bright frame.
+        static void QuietMenus() {
+            var doc = Load("MainWindow.xaml");
+            XmlElement style = null;
+            foreach (XmlElement e in doc.GetElementsByTagName("Style")) if (e.GetAttribute("TargetType") == "ComboBox") style = e;
+            XmlElement box = null, panel = null;
+            foreach (XmlElement e in style.GetElementsByTagName("Border")) {
+                if (e.GetAttribute("Name", XamlNs) == "Box") box = e;
+                if (e.ParentNode != null && e.ParentNode.LocalName == "Popup") panel = e;
+            }
+            T.Check(box != null && box.GetAttribute("BorderThickness") == "0,0,0,1", "açılır liste alanı çerçevesiz, yalnızca alt çizgi (" + (box == null ? "?" : box.GetAttribute("BorderThickness")) + ")");
+            double radius;
+            bool soft = panel != null && !panel.GetAttribute("BorderBrush").Contains("BorderStrong") && double.TryParse(panel.GetAttribute("CornerRadius"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out radius) && radius >= 6 && panel.GetElementsByTagName("DropShadowEffect").Count == 1;
+            T.Check(soft, "açılan liste parlak çerçeve yerine yumuşak, gölgeli bir panel");
+        }
+
+        // Readable without glare: the user found white text and rules on the dark ground too bright.
+        static void SoftContrast() {
+            var dark = Theme.Palette("dark"); var light = Theme.Palette("light");
+            double text = Theme.Contrast(dark["Text"], dark["Surface"]), rule = Theme.Contrast(dark["BorderStrong"], dark["Bg"]), line = Theme.Contrast(dark["Border"], dark["Bg"]);
+            T.Check(text >= 7 && text <= 13, "koyu tema: metin okunur ama parlamıyor (" + text.ToString("0.0") + ")");
+            T.Check(rule <= 4 && line <= 1.8, "koyu tema: çizgiler yumuşak (" + rule.ToString("0.0") + " / " + line.ToString("0.0") + ")");
+            double lightRule = Theme.Contrast(light["BorderStrong"], light["Bg"]);
+            T.Check(lightRule <= 12, "açık tema: bölüm çizgileri mürekkepten yumuşak (" + lightRule.ToString("0.0") + ")");
         }
 
         // The primary button keeps readable text while hovered and pressed (Impeccable's detector found 4.2:1).
