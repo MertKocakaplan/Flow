@@ -10,8 +10,57 @@ namespace FlowTests {
     public static class ContractTests {
         const string XamlNs = "http://schemas.microsoft.com/winfx/2006/xaml";
 
+        static readonly string[] Windows = { "MainWindow.xaml", "CloseDialog.xaml" };
+
         public static void Run() {
             XamlNames();
+            XamlColorLiterals();
+            FocusStates();
+        }
+
+        static string Detail(List<string> items) { return items.Count == 0 ? "" : ": " + string.Join(", ", items.Take(12)); }
+
+        // High-contrast mode maps every Theme key to system colours; a literal colour in XAML would escape it.
+        static void XamlColorLiterals() {
+            var named = new HashSet<string>(typeof(System.Windows.Media.Colors).GetProperties().Select(p => p.Name), StringComparer.OrdinalIgnoreCase);
+            named.Remove("Transparent");
+            var colourAttributes = new[] { "Brush", "Background", "Foreground", "Fill", "Stroke", "Color" };
+            var literals = new List<string>();
+            foreach (var file in Windows)
+                foreach (XmlElement element in Load(file).GetElementsByTagName("*")) {
+                    foreach (XmlAttribute attribute in element.Attributes) {
+                        if (!colourAttributes.Any(a => attribute.LocalName.EndsWith(a))) continue;
+                        var value = attribute.Value.Trim();
+                        if (value.StartsWith("#") || named.Contains(value)) literals.Add(file + ":" + element.LocalName + "." + attribute.LocalName + "=" + value);
+                    }
+                    if ((element.LocalName == "Color" || element.LocalName == "SolidColorBrush") && element.InnerText.Trim().Length > 0) literals.Add(file + ":" + element.LocalName + "=" + element.InnerText.Trim());
+                }
+            T.Check(literals.Count == 0, "XAML'de sabit renk yok" + Detail(literals));
+        }
+
+        // Every interactive template shows keyboard focus. A template owned by a control that never takes
+        // focus is exempt; combo box items show keyboard position through IsHighlighted.
+        static void FocusStates() {
+            var interactive = new HashSet<string> { "Button", "ToggleButton", "RadioButton", "CheckBox", "TextBox", "ComboBox", "ComboBoxItem", "ListBoxItem" };
+            var missing = new List<string>();
+            foreach (var file in Windows)
+                foreach (XmlElement template in Load(file).GetElementsByTagName("ControlTemplate")) {
+                    var target = template.GetAttribute("TargetType");
+                    if (!interactive.Contains(target)) continue;
+                    var owner = template.ParentNode == null ? null : template.ParentNode.ParentNode as XmlElement;
+                    if (owner != null && owner.GetAttribute("Focusable") == "False") continue;
+                    var properties = template.GetElementsByTagName("Trigger").Cast<XmlElement>().Select(t => t.GetAttribute("Property")).ToList();
+                    bool shows = properties.Contains("IsKeyboardFocused") || properties.Contains("IsKeyboardFocusWithin") || (target == "ComboBoxItem" && properties.Contains("IsHighlighted"));
+                    if (!shows) missing.Add(file + ":" + target + Owner(template));
+                }
+            T.Check(missing.Count == 0, "her etkileşimli şablonda klavye odağı görünür" + Detail(missing));
+        }
+        static string Owner(XmlElement template) {
+            for (XmlNode node = template.ParentNode; node != null; node = node.ParentNode) {
+                var element = node as XmlElement;
+                if (element != null && element.LocalName == "Style" && element.GetAttribute("Key", XamlNs).Length > 0) return " (" + element.GetAttribute("Key", XamlNs) + ")";
+            }
+            return "";
         }
 
         static XmlDocument Load(string resource) {

@@ -122,6 +122,9 @@ namespace Flow {
             foreach (var pair in map) { var element = C<UIElement>(pair.Value); if (element != null) element.Visibility = pair.Key == name ? Visibility.Visible : Visibility.Collapsed; }
             var nav = C<RadioButton>("Nav" + char.ToUpperInvariant(name[0]) + name.Substring(1));
             if (nav != null && nav.IsChecked != true) nav.IsChecked = true;
+            // The header carries the page title; it follows language changes through the resource reference.
+            var title = C<TextBlock>("HeaderEyebrow");
+            if (title != null) title.SetResourceReference(TextBlock.TextProperty, name == "download" ? "s.dl.title" : name == "history" ? "s.hist.title" : name == "settings" ? "s.set.title" : "s.queue.title");
             if (name == "history") RefreshHistory();
             if (name == "settings") RefreshSettingsInfo();
         }

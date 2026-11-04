@@ -36,6 +36,70 @@ namespace FlowTests {
             return path;
         }
 
+        // Visible button texts that do not fit their button (measured against the text's own width).
+        public static List<string> ClippedButtons(DependencyObject root) {
+            var clipped = new List<string>();
+            foreach (var button in Visuals(root).OfType<System.Windows.Controls.Primitives.ButtonBase>().Where(b => b.IsVisible)) {
+                foreach (var text in Visuals(button).OfType<TextBlock>().Where(t => t.IsVisible && !string.IsNullOrEmpty(t.Text))) {
+                    var formatted = new FormattedText(text.Text, Loc.Culture, text.FlowDirection, new Typeface(text.FontFamily, text.FontStyle, text.FontWeight, text.FontStretch), text.FontSize, Brushes.Black, VisualTreeHelper.GetDpi(text).PixelsPerDip);
+                    if (formatted.Width > text.ActualWidth + 0.5) clipped.Add((string.IsNullOrEmpty(button.Name) ? "" : button.Name + ":") + text.Text);
+                }
+            }
+            return clipped;
+        }
+
+        // The element is shown, inside the window, and inside the viewport of the nearest scroll viewer.
+        public static bool InView(Window window, string name) {
+            var element = Find<FrameworkElement>(window, name);
+            var content = (FrameworkElement)window.Content;
+            if (element == null || !element.IsVisible) return false;
+            var inWindow = element.TransformToAncestor(content).TransformBounds(new Rect(element.RenderSize));
+            if (inWindow.Left < -0.5 || inWindow.Top < -0.5 || inWindow.Right > content.ActualWidth + 0.5 || inWindow.Bottom > content.ActualHeight + 0.5) return false;
+            for (var parent = VisualTreeHelper.GetParent(element); parent != null; parent = VisualTreeHelper.GetParent(parent)) {
+                var viewer = parent as ScrollViewer;
+                if (viewer == null) continue;
+                var inViewer = element.TransformToAncestor(viewer).TransformBounds(new Rect(element.RenderSize));
+                return inViewer.Top >= -0.5 && inViewer.Bottom <= viewer.ViewportHeight + 0.5 && inViewer.Left >= -0.5 && inViewer.Right <= viewer.ViewportWidth + 0.5;
+            }
+            return true;
+        }
+
+        static void RedesignChecks() {
+            ShellChecks();
+        }
+
+        static Controller OpenWith(string name, string theme, double width, double height) {
+            var paths = NewPaths(name);
+            var s = SettingsRules.Defaults(paths); s.Language = "tr"; s.Theme = theme; s.Parallel = 1; s.Notify = false;
+            Store.SaveSettings(paths, s);
+            return Open(paths, width, height, new FakeExecutor());
+        }
+
+        static void Resize(Window window, double width, double height) { window.Width = width; window.Height = height; Pump(); window.UpdateLayout(); Pump(); }
+
+        static void ShellChecks() {
+            var c = OpenWith("ui-redesign-shell", "light", 1180, 840);
+            var w = c.Window;
+            var rail = Find<Border>(w, "Sidebar");
+            double railBefore = rail.ActualWidth;
+            bool navBefore = Find<TextBlock>(w, "NavDownloadText").IsVisible;
+            foreach (var size in ShotSizes) {
+                Resize(w, size[0], size[1]);
+                foreach (var language in new[] { "tr", "en" }) {
+                    Loc.Set(language); Pump();
+                    var clipped = ClippedButtons(rail);
+                    T.Check(clipped.Count == 0, "kabuk düğmeleri kırpılmıyor (" + language + ", " + size[0] + ")" + (clipped.Count == 0 ? "" : ": " + string.Join(", ", clipped)));
+                }
+                Loc.Set("tr"); Pump();
+            }
+            Resize(w, 760, 560);
+            var page = Find<ScrollViewer>(w, "DownloadPage");
+            T.Check(page.ComputedHorizontalScrollBarVisibility != Visibility.Visible && ((FrameworkElement)page.Content).ActualWidth <= page.ViewportWidth + 1, "dar modda yatay taşma yok");
+            Resize(w, 1180, 840);
+            T.Check(Math.Abs(rail.ActualWidth - railBefore) < 0.5 && Find<TextBlock>(w, "NavDownloadText").IsVisible == navBefore, "dar moddan çıkınca geniş düzen geri gelir");
+            w.Close();
+        }
+
         static void Shot(Window window, string prefix, string theme) {
             foreach (var scale in new[] { 1.0, 1.5 }) {
                 var name = prefix + "-" + (scale == 1.0 ? "100" : "150") + "-" + theme;

@@ -15,21 +15,26 @@ namespace Flow {
             "OnAccent", "Accent", "AccentHover", "AccentPressed", "AccentSoft", "AccentText",
             "Danger", "DangerSoft", "Success", "SuccessSoft", "Warning", "WarningSoft", "Info", "InfoSoft",
             "Sidebar", "SidebarText", "SidebarMuted", "SidebarActive", "SidebarHover",
-            "Focus", "Selection", "InputBg", "InputBorder", "ScrollThumb", "ScrollThumbHover", "Track"
+            "Focus", "Selection", "InputBg", "InputBorder", "ScrollThumb", "ScrollThumbHover", "Track",
+            "SourceYouTube", "SourceInstagram", "SourceTikTok", "SourceOther"
         };
+        // Afiş ızgarası: a solid cobalt rail on a pure white ground, near-black ink, hairline rules.
+        // Red is kept for errors only; the Source* colours mark a job's source as a small square key.
         static readonly string[] Light = {
-            "#F3F5F6", "#FFFFFF", "#F0F4F5", "#E6EDF0", "#DCE3E7", "#9EAEB8", "#15232C", "#4F606B", "#66767F",
-            "#FFFFFF", "#0A7A70", "#08665E", "#06544D", "#DDF1ED", "#07645C",
-            "#B42318", "#FDECEA", "#17694A", "#E3F4EC", "#8A5300", "#FFF4DB", "#1F5F99", "#E6F0FA",
-            "#112833", "#E8F0F3", "#A3B7C1", "#21404D", "#1A3541",
-            "#0FA193", "#B7E4DD", "#FFFFFF", "#A7B6BF", "#B8C4CB", "#8E9DA6", "#E3EAED"
+            "#FFFFFF", "#FFFFFF", "#F1F2F4", "#E6E8EC", "#D5D8DE", "#111318", "#111318", "#4A4F5A", "#5F6570",
+            "#FFFFFF", "#1F3FD1", "#1A35B3", "#152B91", "#E5EAFC", "#1A36B8",
+            "#C4161C", "#FDE8E8", "#1C7A3E", "#E3F3E8", "#8F5200", "#FFF1D6", "#20539E", "#E6EEF9",
+            "#1F3FD1", "#FFFFFF", "#C9D3FA", "#142C9E", "#2A49DA",
+            "#1F3FD1", "#C9D3FA", "#FFFFFF", "#8C929E", "#B9BEC8", "#8C929E", "#ECEEF1",
+            "#C8402A", "#A8336F", "#0F7C80", "#8A6300"
         };
         static readonly string[] Dark = {
-            "#0E151A", "#161F25", "#1C272E", "#233039", "#28363F", "#4B5D68", "#E6EDF1", "#A1B0B9", "#8797A1",
-            "#04211D", "#33C2AC", "#52D0BC", "#27A592", "#133833", "#5FD6C3",
-            "#FF9C94", "#3A1B19", "#76D6A8", "#15352A", "#F2C265", "#3A2D12", "#8CC2F5", "#16293B",
-            "#0A1115", "#E6EDF1", "#94A8B3", "#1B2D36", "#15232A",
-            "#52D0BC", "#1F5B52", "#11191E", "#3C4D57", "#3B4A53", "#56666F", "#26333B"
+            "#0E0F12", "#15171B", "#1C1F24", "#252930", "#2E333B", "#E8EAEE", "#ECEEF2", "#A3A9B4", "#8F96A1",
+            "#FFFFFF", "#3D5CF5", "#5470F7", "#2F4DE0", "#1A2350", "#8FA3FF",
+            "#FF8A80", "#3A1716", "#6FD69A", "#12301E", "#F2B544", "#35280E", "#8DB8F5", "#14243A",
+            "#1B2E9A", "#FFFFFF", "#AEBBF5", "#0F1D6E", "#24399F",
+            "#8FA3FF", "#2A3A8F", "#111317", "#4A505B", "#3A3F48", "#5A616C", "#1C1F24",
+            "#E0705C", "#D46AA2", "#3FB2B6", "#C9A13B"
         };
 
         public static string Preference { get; private set; }
