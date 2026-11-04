@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
 import {parseHTML} from 'linkedom';
 import {translator} from '../../chrome-extension/i18n.js';
 
@@ -26,4 +27,25 @@ test('setup.html keys exist in Turkish and English',()=>{
 });
 test('setup.js loads as a module',()=>{
   assert.ok(document.querySelector('script[type="module"][src="setup.js"]'));
+});
+test('no setup text is empty before translation',()=>{
+  const empty=[...document.querySelectorAll('[data-i18n]')].filter(n=>!n.textContent.trim()).map(n=>n.getAttribute('data-i18n'));
+  assert.deepEqual(empty,[]);
+});
+test('setup defaults match the Turkish strings',()=>{
+  const tr=translator('tr');
+  for(const n of document.querySelectorAll('strong[data-i18n]'))assert.equal(n.textContent,tr(n.getAttribute('data-i18n')));
+});
+const run=async saved=>{
+  const page=parseHTML(html).document;
+  const source=readFileSync(new URL('../../chrome-extension/setup.js',import.meta.url),'utf8').replace(/^import[^\n]*\n/gm,'');
+  const context=vm.createContext({document:page,translator,navigator:{language:'tr'},chrome:{i18n:{getUILanguage:()=>'tr'},storage:{local:{get:async()=>saved}}}});
+  await new vm.Script('(async()=>{'+source+'\n})()').runInContext(context);
+  return page.documentElement;
+};
+test('the setup page follows the desktop unless the panel chose a language',async()=>{
+  let root=await run({desktopLanguage:'en',desktopTheme:'dark'});
+  assert.equal(root.getAttribute('lang'),'en');assert.equal(root.dataset.theme,'dark');
+  root=await run({language:'tr',desktopLanguage:'en'});
+  assert.equal(root.getAttribute('lang'),'tr');
 });

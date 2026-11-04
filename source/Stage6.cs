@@ -42,6 +42,7 @@ namespace Flow {
             C<TextBox>("ScheduleTimeBox").Text = DateTime.Now.AddHours(1).ToString("HH:00", CultureInfo.InvariantCulture);
             C<ComboBox>("StartModeBox").SelectionChanged += (s, e) => UpdateScheduleHeader();
             C<ComboBox>("ScheduleDateBox").SelectionChanged += (s, e) => UpdateScheduleHeader();
+            C<ComboBox>("ScheduleDateBox").DropDownOpened += (s, e) => RefreshDateItems();
             C<TextBox>("ScheduleTimeBox").TextChanged += (s, e) => UpdateScheduleHeader();
             UpdateScheduleHeader();
 
@@ -82,17 +83,24 @@ namespace Flow {
             SelectTag(box, selected.ToString(CultureInfo.InvariantCulture));
             loading = was;
         }
+        // Flow can stay open past midnight: "today" is worked out again whenever the list opens.
+        internal Func<DateTime> Today = () => DateTime.Today;
+        void RefreshDateItems() {
+            var first = C<ComboBox>("ScheduleDateBox").Items.OfType<FrameworkElement>().FirstOrDefault();
+            if (first != null && Convert.ToString(first.Tag) == Today().ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)) return;
+            BuildDateItems(); UpdateScheduleHeader();
+        }
         void BuildDateItems() {
             var box = C<ComboBox>("ScheduleDateBox");
             var keep = TagOf(box);
             bool was = loading; loading = true;
             box.Items.Clear();
             for (int i = 0; i < 7; i++) {
-                var day = DateTime.Today.AddDays(i);
+                var day = Today().AddDays(i);
                 var label = i == 0 ? Loc.T("sched.today") : i == 1 ? Loc.T("sched.tomorrow") : day.ToString("dddd", Loc.Culture);
                 box.Items.Add(new ComboBoxItem { Tag = day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), Content = label + " · " + day.ToString(Loc.Lang == "tr" ? "dd.MM" : "MMM d", Loc.Culture) });
             }
-            SelectTag(box, keep ?? DateTime.Today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+            SelectTag(box, keep ?? Today().ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
             loading = was;
         }
         partial void OnLanguageChangedExtra() {

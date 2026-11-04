@@ -52,6 +52,18 @@ namespace Flow {
             if(address.AddressFamily==AddressFamily.InterNetworkV6)return (b[0]&0xe0)==0x20; // global unicast only
             return b[0]!=0 && b[0]!=10 && b[0]!=127 && b[0]<224 && !(b[0]==169&&b[1]==254) && !(b[0]==172&&b[1]>=16&&b[1]<=31) && !(b[0]==192&&b[1]==168) && !(b[0]==100&&b[1]>=64&&b[1]<=127);
         }
+        // Statuses that say what is wrong. Anything else stays a network problem and may be tried again.
+        internal static ErrorCode StatusError(HttpStatusCode code) {
+            if(code==HttpStatusCode.Forbidden)return ErrorCode.Forbidden;
+            if(code==HttpStatusCode.Unauthorized)return ErrorCode.LoginRequired;
+            if(code==HttpStatusCode.NotFound||code==HttpStatusCode.Gone)return ErrorCode.Unavailable;
+            if((int)code==429)return ErrorCode.RateLimited;
+            return ErrorCode.None;
+        }
+        internal static IPEndPoint GuardConnection(ServicePoint point,IPEndPoint remote,int retry) {
+            if(!PublicAddress(remote.Address))throw new FlowException(ErrorCode.UrlNotPublic);
+            return null;   // the system chooses the local end
+        }
         static async Task<HttpWebResponse> Open(string value, string referer, bool headersOnly, CancellationToken token) {
             for(int redirects=0;redirects<6;redirects++) {
                 token.ThrowIfCancellationRequested();
@@ -61,10 +73,13 @@ namespace Flow {
                 var request=(HttpWebRequest)WebRequest.Create(uri);request.AllowAutoRedirect=false;request.Method=headersOnly?"HEAD":"GET";
                 request.UserAgent="Flow/2.2";request.Timeout=30000;request.ReadWriteTimeout=30000;request.Credentials=null;request.UseDefaultCredentials=false;
                 request.Referer=Referrer(referer);
+                // The check above and the connection resolve the name separately, so the address really dialled is
+                // checked too. Through a proxy that address is the proxy's, which may rightly be private.
+                if(request.Proxy==null||request.Proxy.IsBypassed(uri))request.ServicePoint.BindIPEndPointDelegate=GuardConnection;
                 HttpWebResponse response=null;bool retryGet=false;
                 using(token.Register(request.Abort)) {
                     try { response=(HttpWebResponse)await request.GetResponseAsync(); }
-                    catch(WebException ex) { token.ThrowIfCancellationRequested();var http=ex.Response as HttpWebResponse;if(http!=null){var code=http.StatusCode;http.Dispose();if(code==HttpStatusCode.Forbidden)throw new FlowException(ErrorCode.Forbidden);if(code==HttpStatusCode.Unauthorized)throw new FlowException(ErrorCode.LoginRequired);retryGet=headersOnly&&(code==HttpStatusCode.MethodNotAllowed||code==HttpStatusCode.NotImplemented);}if(!retryGet)throw new FlowException(ex.Status==WebExceptionStatus.Timeout?ErrorCode.Timeout:ErrorCode.Network); }
+                    catch(WebException ex) { token.ThrowIfCancellationRequested();var http=ex.Response as HttpWebResponse;if(http!=null){var code=http.StatusCode;http.Dispose();var failure=StatusError(code);if(failure!=ErrorCode.None)throw new FlowException(failure);retryGet=headersOnly&&(code==HttpStatusCode.MethodNotAllowed||code==HttpStatusCode.NotImplemented);}if(!retryGet)throw new FlowException(ex.Status==WebExceptionStatus.Timeout?ErrorCode.Timeout:ErrorCode.Network); }
                 }
                 if(retryGet)return await Open(value,referer,false,token);
                 var status=(int)response.StatusCode;
@@ -95,7 +110,7 @@ namespace Flow {
             using(var response=await Open(job.Url,job.Referrer,false,token))
             using(token.Register(response.Close)) {
                 var ext=Extension(response.ContentType);if(ext==null)throw new FlowException(ErrorCode.ImageUnsupported);
-                var folder=OutputPlanner.Folder(job.Options,job);Directory.CreateDirectory(folder);
+                var folder=OutputPlanner.Folder(job.Options,job);EngineExecutor.Prepare(folder);
                 var available=DiskSpace.Free(folder);var required=(response.ContentLength>0?response.ContentLength:MaxBytes)+1024*1024;
                 if(available>=0&&available<required)throw new FlowException(ErrorCode.DiskSpaceLow,null,new[]{Loc.Size(required),Loc.Size(available)});
                 job.TempDir=EngineExecutor.PartsFolder(folder,job.Id);var part=Path.Combine(job.TempDir,"image.part");
@@ -120,14 +135,17 @@ namespace Flow {
                         }
                     }
                 } catch(Exception){token.ThrowIfCancellationRequested();throw;}
-                if(downloaded<=0 || response.ContentLength>=0 && downloaded!=response.ContentLength || Signature(signature,captured)!=ext)throw new FlowException(ErrorCode.VerifyFailed,null,new[]{Loc.T("verify.unreadable")});
+                if(downloaded<=0 || response.ContentLength>=0 && downloaded!=response.ContentLength || Signature(signature,captured)!=ext)throw new FlowException(ErrorCode.VerifyFailed,null,new[]{"verify.unreadable"});
                 context.Post(()=>item.SetStage(JobState.Verifying,"stage.verify"));
                 var probe=await EngineExecutor.Probe(part,token);
                 if(!probe.HasVideo || probe.HasAudio || probe.Width<=0 || probe.Height<=0)throw new FlowException(ErrorCode.ImageUnsupported);
                 var decoded=await ProcessRunner.Run(Engine.FfmpegExe,new[]{"-v","error","-xerror","-i",part,"-frames:v","1","-f","null","-"},null,token,120);
-                if(decoded.ExitCode!=0)throw new FlowException(ErrorCode.VerifyFailed,null,new[]{Loc.T("verify.unreadable")});
-                token.ThrowIfCancellationRequested();File.Move(part,target);EngineExecutor.TryDelete(job.TempDir,job.Id);
-                context.Post(()=>item.MarkCompleted(target,"image-original",probe));
+                if(decoded.ExitCode!=0)throw new FlowException(ErrorCode.VerifyFailed,null,new[]{"verify.unreadable"});
+                token.ThrowIfCancellationRequested();
+                // The name was chosen before the transfer; a file may have appeared there since.
+                var final=File.Exists(target)?Naming.Unique(folder,name,ext,p=>File.Exists(p)||context.ReservedByOther(p,job.Id)):target;
+                File.Move(part,final);EngineExecutor.TryDelete(job.TempDir,job.Id);
+                context.Post(()=>item.MarkCompleted(final,"image-original",probe));
             }
         }
     }

@@ -30,10 +30,9 @@ namespace Flow {
         [STAThread] public static int Main(string[] args) {
             ScheduledLaunch = args != null && args.Contains(ScheduledStart.Argument);
             bool browserLaunch = args != null && args.Contains("--browser");
-            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
             var paths = AppPaths.Resolve();
             var instance = InstanceLock.TryAcquire(paths.DataDir);
-            if (instance == null) { if (!browserLaunch) InstanceLock.SignalExisting(paths.DataDir); return 2; }
+            if (instance == null) { if (!browserLaunch && !ScheduledLaunch) InstanceLock.SignalExisting(paths.DataDir); return 2; }
             using (instance) {
                 var app = new Application { ShutdownMode = ShutdownMode.OnMainWindowClose };
                 app.DispatcherUnhandledException += (s, e) => { MessageBox.Show(Loc.Error(e.Exception), "Flow", MessageBoxButton.OK, MessageBoxImage.Error); e.Handled = true; };

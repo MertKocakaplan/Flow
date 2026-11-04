@@ -35,7 +35,7 @@ namespace Flow {
         public string DayText { get { var at = Iso.Parse(Entry.CompletedAt); return at.HasValue ? at.Value.ToLocalTime().ToString("dd.MM", Loc.Culture) : "—"; } }
         public string PlatformKey { get { return Entry.Platform ?? ""; } }
         public string PathText { get { return !string.IsNullOrEmpty(Entry.FilePath) ? Entry.FilePath : Entry.SourceUrl == null ? Loc.T("hist.noSource") : ""; } }
-        public string ErrorText { get { ErrorCode code; return Entry.Status == "failed" && Enum.TryParse(Entry.Error ?? "", out code) ? Loc.Error(code) : ""; } }
+        public string ErrorText { get { ErrorCode code; return Entry.Status == "failed" && Enum.TryParse(Entry.Error ?? "", out code) ? Loc.Error(code, (Entry.ErrorArgs ?? new List<string>()).Cast<object>().ToArray()) : ""; } }
         public bool CanReveal { get { return Exists; } }
         public bool HasSource { get { return !string.IsNullOrEmpty(Entry.SourceUrl); } }
     }
@@ -50,13 +50,22 @@ namespace Flow {
             };
         }
         void InitHistoryFilters() {
-            foreach (var name in new[] { "HistoryPlatformBox", "HistoryStatusBox", "HistoryDateBox" }) { C<ComboBox>(name).SelectedIndex = 0; C<ComboBox>(name).SelectionChanged += (s, e) => RefreshHistory(); }
-            C<TextBox>("HistorySearch").TextChanged += (s, e) => RefreshHistory();
+            foreach (var name in new[] { "HistoryPlatformBox", "HistoryStatusBox", "HistoryDateBox" }) { C<ComboBox>(name).SelectedIndex = 0; C<ComboBox>(name).SelectionChanged += (s, e) => FilterHistory(); }
+            C<TextBox>("HistorySearch").TextChanged += (s, e) => FilterHistory();
         }
 
         public List<HistoryRow> HistoryRows { get { var list = C<ItemsControl>("HistoryList").ItemsSource as List<HistoryRow>; return list ?? new List<HistoryRow>(); } }
 
-        void RefreshHistory() {
+        // Whether each file still exists is read once per refresh; filtering and typing reuse the answer.
+        readonly Dictionary<string, bool> historyFiles = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+        bool HistoryFileExists(string path) {
+            if (string.IsNullOrEmpty(path)) return false;
+            bool exists;
+            if (!historyFiles.TryGetValue(path, out exists)) historyFiles[path] = exists = File.Exists(path);
+            return exists;
+        }
+        void RefreshHistory() { historyFiles.Clear(); FilterHistory(); }
+        void FilterHistory() {
             var list = C<ItemsControl>("HistoryList");
             if (list == null || C<ComboBox>("HistoryPlatformBox") == null) return;
             var search = (C<TextBox>("HistorySearch").Text ?? "").Trim();
@@ -73,7 +82,7 @@ namespace Flow {
                     if (hay.IndexOf(search, StringComparison.CurrentCultureIgnoreCase) < 0 && hay.ToLower(Loc.Culture).IndexOf(search.ToLower(Loc.Culture), StringComparison.Ordinal) < 0) return false;
                 }
                 return true;
-            }).Select(h => new HistoryRow { Entry = h, Exists = !string.IsNullOrEmpty(h.FilePath) && File.Exists(h.FilePath) }).ToList();
+            }).Select(h => new HistoryRow { Entry = h, Exists = HistoryFileExists(h.FilePath) }).ToList();
             list.ItemsSource = rows;
             bool filtered = rows.Count != history.Count;
             C<Border>("HistoryEmpty").Visibility = rows.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
@@ -109,6 +118,7 @@ namespace Flow {
             if (SettingsRules.Formats.Contains(entry.Format)) options.Format = entry.Format;
             if (SettingsRules.Profiles.Contains(entry.Profile)) options.Profile = entry.Profile;
             if (options.Format == "mkv" && options.Profile == "best") { options.Codec = "auto"; options.Height = 0; }
+            if (entry.RequestedCodec != null) { options.Codec = entry.RequestedCodec; options.Height = entry.RequestedHeight; options.FpsLimit = entry.RequestedFps; options.Strict = entry.RequestedStrict; }
             if(entry.MediaKind=="image"){options.Format=entry.Format;options.Profile="custom";options.Height=0;options.Codec="auto";}
             var job = new DownloadJob { Url = url.Url, Platform = entry.Platform ?? url.Platform.ToString(), Title = entry.Title, Channel = entry.Channel, ContentId = entry.ContentId, Duration = entry.Duration, ItemIndex = entry.ItemIndex, Options = options,MediaKind=entry.MediaKind,Referrer=entry.Referrer };
             var item = queue.Add(job, false);

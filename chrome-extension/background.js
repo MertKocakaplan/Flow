@@ -13,7 +13,7 @@ const discovery=new Discovery(chrome,openPanel);
 const backgroundWork=fn=>discovery.serial(fn).catch(()=>{});
 chrome.webRequest.onHeadersReceived.addListener(details=>backgroundWork(()=>discovery.network(details)),{urls:['http://*/*','https://*/*'],types:['media','xmlhttprequest','image','other']},['responseHeaders']);
 chrome.webNavigation.onCommitted.addListener(details=>backgroundWork(()=>discovery.navigate(details)));
-chrome.webNavigation.onHistoryStateUpdated.addListener(details=>backgroundWork(()=>discovery.navigate(details)));
+chrome.webNavigation.onHistoryStateUpdated.addListener(details=>backgroundWork(()=>discovery.navigate(details,true)));
 chrome.tabs.onRemoved.addListener(tabId=>backgroundWork(async()=>{delete discovery.tabs[tabId];await discovery.persist();}));
 chrome.permissions.onRemoved.addListener(()=>backgroundWork(async()=>{if(!await chrome.permissions.contains({origins:['http://*/*','https://*/*']}))await discovery.configure(false,discovery.config.overlays);}));
 discovery.ready.then(()=>discovery.syncRegistration()).catch(()=>{});
@@ -36,17 +36,22 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if(sender.id!==chrome.runtime.id)return false;
-  if(['scan-found','scan-ready','scan-open'].includes(message?.type)) {
+  if(message?.type==='scan-open') {
+    if(sender.tab?.id==null || !webUrl(sender.url))return false;
+    // sidePanel.open only works inside the click's user gesture, so nothing is awaited before it.
+    const item=sender.frameId===0 && sender.tab.url && webUrl(sender.url)!==webUrl(sender.tab.url)?null:candidate(message.item,sender.url);
+    if(!item || item.protected){sendResponse({ok:false});return false;}
+    const opening=openPanel(sender.tab.id);
+    discovery.serial(async()=>{
+      await chrome.storage.session.set({draft:{url:item.url,referrer:item.pageUrl,title:item.title,preview:null,submission:null}});
+      await opening;return {ok:true};
+    }).then(sendResponse).catch(()=>sendResponse({ok:false}));return true;
+  }
+  if(['scan-found','scan-ready'].includes(message?.type)) {
     if(sender.tab?.id==null || !webUrl(sender.url))return false;
     discovery.serial(async()=>{
       if(message.type==='scan-found'){await discovery.found(message,sender);return {ok:true};}
-      if(message.type==='scan-ready')return {...discovery.config,enabled:discovery.config.enabled || discovery.tabs[sender.tab.id]?.manual===true};
-      const tab=await chrome.tabs.get(sender.tab.id);
-      if(sender.frameId===0 && webUrl(sender.url)!==webUrl(tab.url))return {ok:false};
-      const item=candidate(message.item,sender.url);
-      if(!item || item.protected)return {ok:false};
-      await chrome.storage.session.set({draft:{url:item.url,referrer:item.pageUrl,title:item.title,preview:null,submission:null}});
-      await openPanel(tab.id);return {ok:true};
+      return {...discovery.config,enabled:discovery.config.enabled || discovery.tabs[sender.tab.id]?.manual===true};
     }).then(sendResponse).catch(()=>sendResponse({ok:false}));return true;
   }
   if (sender.id !== chrome.runtime.id || sender.url?.split('?')[0] !== panelUrl || sender.tab?.url && sender.tab.url.split('?')[0] !== panelUrl) return false;

@@ -26,19 +26,21 @@
           <Grid.RenderTransform><ScaleTransform ScaleX="1" ScaleY="1"/></Grid.RenderTransform>
           <Border x:Name="Chrome" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"/>
           <Border x:Name="Hover" Background="{DynamicResource Text}" Opacity="0"/>
+          <Border x:Name="Press" Background="{DynamicResource Text}" Opacity="0"/>
           <Border x:Name="Ring" Margin="-3" BorderBrush="{DynamicResource Focus}" BorderThickness="2" Visibility="Collapsed"/>
           <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center" RecognizesAccessKey="True"/>
         </Grid>
         <ControlTemplate.Triggers>
-          <!-- Motion: a 120 ms overlay on hover and press; buttons with centred content also give way to 0.96.
+          <!-- Motion: a 120 ms overlay each for hover and press, so a keyboard press never leaves the hover layer on;
+               together they stay light enough for white on the dark theme's accent. Buttons with centred content also give way to 0.96.
                Wide buttons (HorizontalContentAlignment=Stretch) keep still. Zero with Windows animations off. -->
           <Trigger Property="IsMouseOver" Value="True">
             <Trigger.EnterActions><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Hover" Storyboard.TargetProperty="Opacity" To="0.06" Duration="{StaticResource MotionFast}"/></Storyboard></BeginStoryboard></Trigger.EnterActions>
             <Trigger.ExitActions><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Hover" Storyboard.TargetProperty="Opacity" To="0" Duration="{StaticResource MotionFast}"/></Storyboard></BeginStoryboard></Trigger.ExitActions>
           </Trigger>
           <Trigger Property="IsPressed" Value="True">
-            <Trigger.EnterActions><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Hover" Storyboard.TargetProperty="Opacity" To="0.13" Duration="{StaticResource MotionFast}"/></Storyboard></BeginStoryboard></Trigger.EnterActions>
-            <Trigger.ExitActions><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Hover" Storyboard.TargetProperty="Opacity" To="0.06" Duration="{StaticResource MotionFast}"/></Storyboard></BeginStoryboard></Trigger.ExitActions>
+            <Trigger.EnterActions><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Press" Storyboard.TargetProperty="Opacity" To="0.05" Duration="{StaticResource MotionFast}"/></Storyboard></BeginStoryboard></Trigger.EnterActions>
+            <Trigger.ExitActions><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Press" Storyboard.TargetProperty="Opacity" To="0" Duration="{StaticResource MotionFast}"/></Storyboard></BeginStoryboard></Trigger.ExitActions>
           </Trigger>
           <MultiTrigger>
             <MultiTrigger.Conditions><Condition Property="IsPressed" Value="True"/><Condition Property="HorizontalContentAlignment" Value="Center"/></MultiTrigger.Conditions>
@@ -76,7 +78,7 @@
         <Grid>
           <Border x:Name="Hover" Background="{DynamicResource SidebarHover}" Opacity="0"/>
           <Border x:Name="Bg" Background="Transparent"/>
-          <Border x:Name="Ring" Margin="1" BorderBrush="{DynamicResource SidebarText}" BorderThickness="2" Visibility="Collapsed"/>
+          <Border x:Name="Ring" Margin="1" BorderBrush="{TemplateBinding Foreground}" BorderThickness="2" Visibility="Collapsed"/>
           <ContentPresenter Margin="14,0,10,0" VerticalAlignment="Center"/>
         </Grid>
         <ControlTemplate.Triggers>
@@ -84,7 +86,7 @@
             <Trigger.EnterActions><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Hover" Storyboard.TargetProperty="Opacity" To="1" Duration="{StaticResource MotionFast}"/></Storyboard></BeginStoryboard></Trigger.EnterActions>
             <Trigger.ExitActions><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Hover" Storyboard.TargetProperty="Opacity" To="0" Duration="{StaticResource MotionFast}"/></Storyboard></BeginStoryboard></Trigger.ExitActions>
           </Trigger>
-          <Trigger Property="IsChecked" Value="True"><Setter TargetName="Bg" Property="Background" Value="{DynamicResource SidebarActive}"/></Trigger>
+          <Trigger Property="IsChecked" Value="True"><Setter TargetName="Bg" Property="Background" Value="{DynamicResource SidebarActive}"/><Setter Property="Foreground" Value="{DynamicResource OnSidebarActive}"/></Trigger>
           <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Ring" Property="Visibility" Value="Visible"/></Trigger>
         </ControlTemplate.Triggers>
       </ControlTemplate></Setter.Value></Setter>
@@ -164,8 +166,8 @@
                 <Path x:Name="Arrow" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,14,0" Data="M 0 0 L 4.5 4.5 L 9 0" Stroke="{DynamicResource TextMuted}" StrokeThickness="1.4"/>
               </Border>
               <ControlTemplate.Triggers>
-                <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Box" Property="Background" Value="{DynamicResource SurfaceHover}"/></Trigger>
-                <Trigger Property="IsChecked" Value="True"><Setter TargetName="Arrow" Property="Stroke" Value="{DynamicResource Accent}"/><Setter TargetName="Box" Property="Background" Value="{DynamicResource SurfaceHover}"/></Trigger>
+                <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Box" Property="Background" Value="{DynamicResource SurfaceHover}"/><Setter TargetName="Arrow" Property="Stroke" Value="{DynamicResource OnSurfaceHover}"/></Trigger>
+                <Trigger Property="IsChecked" Value="True"><Setter TargetName="Arrow" Property="Stroke" Value="{DynamicResource OnSurfaceHover}"/><Setter TargetName="Box" Property="Background" Value="{DynamicResource SurfaceHover}"/></Trigger>
               </ControlTemplate.Triggers>
             </ControlTemplate></ToggleButton.Template>
           </ToggleButton>
@@ -180,6 +182,8 @@
           </Popup>
         </Grid>
         <ControlTemplate.Triggers>
+          <Trigger Property="IsMouseOver" Value="True"><Setter Property="Foreground" Value="{DynamicResource OnSurfaceHover}"/></Trigger>
+          <Trigger Property="IsDropDownOpen" Value="True"><Setter Property="Foreground" Value="{DynamicResource OnSurfaceHover}"/></Trigger>
           <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="Ring" Property="Visibility" Value="Visible"/></Trigger>
           <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.5"/></Trigger>
         </ControlTemplate.Triggers>
@@ -199,7 +203,7 @@
         </Border>
         <ControlTemplate.Triggers>
           <Trigger Property="IsSelected" Value="True"><Setter TargetName="Check" Property="Visibility" Value="Visible"/><Setter Property="Foreground" Value="{DynamicResource AccentText}"/></Trigger>
-          <Trigger Property="IsHighlighted" Value="True"><Setter TargetName="Bg" Property="Background" Value="{DynamicResource SurfaceHover}"/></Trigger>
+          <Trigger Property="IsHighlighted" Value="True"><Setter TargetName="Bg" Property="Background" Value="{DynamicResource SurfaceHover}"/><Setter Property="Foreground" Value="{DynamicResource OnSurfaceHover}"/><Setter TargetName="Check" Property="Stroke" Value="{DynamicResource OnSurfaceHover}"/></Trigger>
           <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.45"/></Trigger>
         </ControlTemplate.Triggers>
       </ControlTemplate></Setter.Value></Setter>
@@ -392,8 +396,13 @@
             <StackPanel Orientation="Horizontal">
               <TextBlock Style="{StaticResource NavIcon}" Text="&#xE8FD;"/>
               <TextBlock x:Name="NavQueueText" Style="{StaticResource NavText}" Text="{DynamicResource s.nav.queue}"/>
-              <Border x:Name="QueueBadge" Background="{DynamicResource SidebarActive}" MinWidth="22" Height="20" Padding="6,0" Margin="10,0,0,0" Visibility="Collapsed" VerticalAlignment="Center">
-                <TextBlock x:Name="QueueBadgeText" Foreground="{DynamicResource SidebarText}" FontFamily="{StaticResource Display}" FontSize="12.5" FontWeight="SemiBold" Typography.NumeralAlignment="Tabular" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+              <Border x:Name="QueueBadge" MinWidth="22" Height="20" Padding="6,0" Margin="10,0,0,0" Visibility="Collapsed" VerticalAlignment="Center">
+                <Border.Style><Style TargetType="Border"><Setter Property="Background" Value="{DynamicResource SidebarActive}"/>
+                  <Style.Triggers><DataTrigger Binding="{Binding IsChecked, ElementName=NavQueue}" Value="True"><Setter Property="Background" Value="{DynamicResource SidebarHover}"/></DataTrigger></Style.Triggers></Style></Border.Style>
+                <TextBlock x:Name="QueueBadgeText" FontFamily="{StaticResource Display}" FontSize="12.5" FontWeight="SemiBold" Typography.NumeralAlignment="Tabular" HorizontalAlignment="Center" VerticalAlignment="Center">
+                  <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Foreground" Value="{DynamicResource OnSidebarActive}"/>
+                    <Style.Triggers><DataTrigger Binding="{Binding IsChecked, ElementName=NavQueue}" Value="True"><Setter Property="Foreground" Value="{DynamicResource SidebarText}"/></DataTrigger></Style.Triggers></Style></TextBlock.Style>
+                </TextBlock>
               </Border>
             </StackPanel>
           </RadioButton>
@@ -407,8 +416,8 @@
         <StackPanel DockPanel.Dock="Bottom">
           <Border x:Name="SidebarActivity" Background="{DynamicResource SidebarActive}" Padding="12,10" Margin="0,0,0,14" Visibility="Collapsed" Cursor="Hand" ToolTip="{DynamicResource s.nav.queue.tip}">
             <StackPanel>
-              <TextBlock x:Name="SidebarActivityText" Foreground="{DynamicResource SidebarText}" FontFamily="{StaticResource Display}" FontSize="12.5" FontWeight="SemiBold" Typography.NumeralAlignment="Tabular" TextWrapping="Wrap"/>
-              <ProgressBar x:Name="SidebarProgress" Height="4" Margin="0,8,0,0" Minimum="0" Maximum="100" Foreground="{DynamicResource SidebarText}" Background="{DynamicResource SidebarHover}"/>
+              <TextBlock x:Name="SidebarActivityText" Foreground="{DynamicResource OnSidebarActive}" FontFamily="{StaticResource Display}" FontSize="12.5" FontWeight="SemiBold" Typography.NumeralAlignment="Tabular" TextWrapping="Wrap"/>
+              <ProgressBar x:Name="SidebarProgress" Height="4" Margin="0,8,0,0" Minimum="0" Maximum="100" Foreground="{DynamicResource OnSidebarActive}" Background="{DynamicResource SidebarHover}"/>
             </StackPanel>
           </Border>
           <TextBlock x:Name="VersionText" Foreground="{DynamicResource SidebarMuted}" FontFamily="{StaticResource Display}" FontSize="11.5" Margin="6,0,0,0" TextWrapping="Wrap"/>
@@ -829,6 +838,8 @@
                   <DataTrigger Binding="{Binding StateKind}" Value="done"><Setter TargetName="StateChip" Property="Background" Value="{DynamicResource SuccessSoft}"/><Setter TargetName="StateLabel" Property="Foreground" Value="{DynamicResource Success}"/><Setter TargetName="Mark" Property="Text" Value="&#xE73E;"/><Setter TargetName="Mark" Property="Foreground" Value="{DynamicResource Success}"/></DataTrigger>
                   <DataTrigger Binding="{Binding StateKind}" Value="error"><Setter TargetName="StateChip" Property="Background" Value="{DynamicResource DangerSoft}"/><Setter TargetName="StateLabel" Property="Foreground" Value="{DynamicResource Danger}"/><Setter TargetName="Mark" Property="Text" Value="&#xE7BA;"/><Setter TargetName="Mark" Property="Foreground" Value="{DynamicResource Danger}"/></DataTrigger>
                   <DataTrigger Binding="{Binding StateKind}" Value="warning"><Setter TargetName="StateChip" Property="Background" Value="{DynamicResource WarningSoft}"/><Setter TargetName="StateLabel" Property="Foreground" Value="{DynamicResource Warning}"/><Setter TargetName="Mark" Property="Text" Value="&#xE72C;"/><Setter TargetName="Mark" Property="Foreground" Value="{DynamicResource Warning}"/></DataTrigger>
+                  <!-- Three digits and the sign still fit the numeral cell, at a smaller size. -->
+                  <DataTrigger Binding="{Binding PercentText}" Value="100%"><Setter TargetName="Figure" Property="FontSize" Value="15"/><Setter TargetName="Figure" Property="Margin" Value="2,3,2,2"/></DataTrigger>
                   <DataTrigger Binding="{Binding StateKey}" Value="paused"><Setter TargetName="Mark" Property="Text" Value="&#xE769;"/></DataTrigger>
                   <DataTrigger Binding="{Binding StateKey}" Value="scheduled"><Setter TargetName="Mark" Property="Text" Value="&#xE823;"/></DataTrigger>
                   <DataTrigger Binding="{Binding PlatformKey}" Value="YouTube"><Setter TargetName="SourceKey" Property="Background" Value="{DynamicResource SourceYouTube}"/></DataTrigger>

@@ -7,6 +7,7 @@ namespace FlowTests {
             Stage6Unit.Run();
             Stage7Unit.Run();
             ContractTests.Run();
+            FixUnit.Run();
         }
     }
 }

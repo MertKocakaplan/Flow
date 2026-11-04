@@ -16,7 +16,9 @@ namespace Flow {
             "Danger", "DangerSoft", "Success", "SuccessSoft", "Warning", "WarningSoft", "Info", "InfoSoft",
             "Sidebar", "SidebarText", "SidebarMuted", "SidebarActive", "SidebarHover",
             "Focus", "Selection", "InputBg", "InputBorder", "ScrollThumb", "ScrollThumbHover", "Track",
-            "SourceYouTube", "SourceInstagram", "SourceTikTok", "SourceOther"
+            "SourceYouTube", "SourceInstagram", "SourceTikTok", "SourceOther",
+            // Ink on the two plates that high contrast paints with the highlight colour.
+            "OnSidebarActive", "OnSurfaceHover"
         };
         // Afiş ızgarası: a solid cobalt rail on a pure white ground, near-black ink, hairline rules.
         // Red is kept for errors only; the Source* colours mark a job's source as a small square key.
@@ -26,7 +28,8 @@ namespace Flow {
             "#C4161C", "#FDE8E8", "#1C7A3E", "#E3F3E8", "#8F5200", "#FFF1D6", "#20539E", "#E6EEF9",
             "#1F3FD1", "#FFFFFF", "#C9D3FA", "#142C9E", "#2A49DA",
             "#1F3FD1", "#C9D3FA", "#FFFFFF", "#8C929E", "#B9BEC8", "#8C929E", "#ECEEF1",
-            "#C8402A", "#A8336F", "#0F7C80", "#8A6300"
+            "#C8402A", "#A8336F", "#0F7C80", "#8A6300",
+            "#FFFFFF", "#111318"
         };
         // Dark: a lifted charcoal ground, softened ink and quiet rules, so text and lines do not glare.
         static readonly string[] Dark = {
@@ -35,7 +38,8 @@ namespace Flow {
             "#F28B82", "#3A1D1D", "#79C99A", "#183226", "#E9B45A", "#352A14", "#8DB3E8", "#182638",
             "#1B2E9A", "#E6E9F6", "#AEB9EE", "#0F1D6E", "#24399F",
             "#8090E6", "#2A3A8F", "#1D2025", "#50565F", "#3A3F48", "#555C67", "#23262C",
-            "#E0705C", "#D46AA2", "#3FB2B6", "#C9A13B"
+            "#E0705C", "#D46AA2", "#3FB2B6", "#C9A13B",
+            "#E6E9F6", "#D3D6DC"
         };
 
         public static string Preference { get; private set; }
@@ -69,7 +73,8 @@ namespace Flow {
                     { "OnAccent", SystemColors.HighlightTextColor }, { "Accent", SystemColors.HighlightColor }, { "AccentHover", SystemColors.HighlightColor }, { "AccentPressed", SystemColors.HighlightColor }, { "AccentSoft", SystemColors.WindowColor }, { "AccentText", SystemColors.HotTrackColor },
                     { "Sidebar", SystemColors.WindowColor }, { "SidebarText", SystemColors.WindowTextColor }, { "SidebarMuted", SystemColors.WindowTextColor }, { "SidebarActive", SystemColors.HighlightColor }, { "SidebarHover", SystemColors.WindowColor },
                     { "Focus", SystemColors.HighlightColor }, { "Selection", SystemColors.HighlightColor }, { "InputBg", SystemColors.WindowColor }, { "InputBorder", SystemColors.WindowTextColor },
-                    { "ScrollThumb", SystemColors.WindowTextColor }, { "ScrollThumbHover", SystemColors.HighlightColor }, { "Track", SystemColors.WindowColor }
+                    { "ScrollThumb", SystemColors.WindowTextColor }, { "ScrollThumbHover", SystemColors.HighlightColor }, { "Track", SystemColors.WindowColor },
+                    { "OnSidebarActive", SystemColors.HighlightTextColor }, { "OnSurfaceHover", SystemColors.HighlightTextColor }
                 };
                 foreach (var key in Keys) result[key] = map.ContainsKey(key) ? map[key] : key.EndsWith("Soft") ? SystemColors.WindowColor : SystemColors.WindowTextColor;
                 return result;

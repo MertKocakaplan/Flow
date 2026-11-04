@@ -222,6 +222,11 @@ namespace Flow {
                     else { result.Silent = true; result.Notes.Add("sel.note.silent"); }
                 }
             }
+            // A muxed file keeps its own sound; for H.264 MP4 it must be AAC, or the final check would fail.
+            if (h264 && mp4 && audio == null && video.HasAudio && !result.VideoConversion && !result.ConvertIfNeeded) {
+                if (string.IsNullOrEmpty(video.ACodec)) result.ConvertIfNeeded = true;
+                else if (!IsAac(video.ACodec)) { result.VideoConversion = true; result.Notes.Add("sel.note.convertAudio"); }
+            }
             result.Audio = audio;
             result.Spec = video.Id + (audio != null ? "+" + audio.Id : "");
             result.Width = video.Width; result.Height = video.Height; result.ShortSide = video.ShortSide; result.Fps = video.Fps;
@@ -286,7 +291,10 @@ namespace Flow {
         // Keeps the full path under the classic Windows limit by shortening the name, not the folder.
         public static string Fit(string folder, string name, string ext) {
             const int limit = 240;
-            int room = limit - folder.Length - ext.Length - 2 - 8;   // 8 = " (999)" collision suffix
+            // 8 = " (999)" collision suffix. While downloading the name sits in .flow-parts\<id>\ with a format and
+            // .part suffix: about 56 characters more, of which the 20 between this limit and Windows' 260 are spare.
+            const int partsOverhead = 36;
+            int room = limit - folder.Length - ext.Length - 2 - 8 - partsOverhead;
             if (room < 24) throw new FlowException(ErrorCode.PathTooLong);
             return name.Length > room ? Naming.Truncate(name, room - 1) : name;
         }

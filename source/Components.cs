@@ -37,6 +37,45 @@ namespace Flow {
         public string Detail { get { return Entry.Updatable ? Loc.T("comp.updatable") : Loc.T("comp.packaged"); } }
     }
 
+    // yt-dlp.exe cannot be replaced while something runs it. Short reads enter here; an update waits for them
+    // to end, and reads that arrive during the update wait for it. Downloads are held by the queue instead.
+    public static class EngineGate {
+        static readonly object sync = new object();
+        static int users;
+        static TaskCompletionSource<bool> updating;
+        sealed class Lease : IDisposable {
+            int done;
+            public void Dispose() { if (Interlocked.Exchange(ref done, 1) == 0) lock (sync) users--; }
+        }
+        public static bool Updating { get { lock (sync) return updating != null; } }
+        public static async Task<IDisposable> Enter(CancellationToken token) {
+            while (true) {
+                Task wait;
+                lock (sync) {
+                    if (updating == null) { users++; return new Lease(); }
+                    wait = updating.Task;
+                }
+                await Task.WhenAny(wait, Task.Delay(Timeout.Infinite, token)).ConfigureAwait(false);
+                token.ThrowIfCancellationRequested();
+            }
+        }
+        // Throws UpdateBusy (and stays open) when a read has not finished within the wait.
+        public static async Task BeginUpdate(int waitMilliseconds) {
+            lock (sync) { if (updating != null) throw new FlowException(ErrorCode.UpdateBusy); updating = new TaskCompletionSource<bool>(); }
+            var until = DateTime.UtcNow.AddMilliseconds(waitMilliseconds);
+            while (true) {
+                lock (sync) if (users == 0) return;
+                if (DateTime.UtcNow >= until) { EndUpdate(); throw new FlowException(ErrorCode.UpdateBusy); }
+                await Task.Delay(100).ConfigureAwait(false);
+            }
+        }
+        public static void EndUpdate() {
+            TaskCompletionSource<bool> finished;
+            lock (sync) { finished = updating; updating = null; }
+            if (finished != null) finished.TrySetResult(true);
+        }
+    }
+
     public sealed class UpdateResult { public string OldVersion, NewVersion; public bool Changed, RolledBack; public string Reason; }
 
     // Component versions, integrity against the package manifest, and the engine update with rollback.
@@ -116,18 +155,18 @@ namespace Flow {
             File.Copy(exe, backup, true);
             File.SetLastWriteTimeUtc(backup, DateTime.UtcNow);
             bool workedBefore = referenceCheck == null || await referenceCheck(exe, token);
-            var run = await ProcessRunner.Run(exe, new[] { "--ignore-config", "--no-colors", "--encoding", "utf-8", "--socket-timeout", "25", "--update" }, log, token, 300);
-            if (run.ExitCode != 0) { Restore(backup, exe); throw new FlowException(ErrorCode.EngineUpdateFailed, run.Error + run.Output, new[] { Last(run.Error) }); }
+            var run = await RunOrNull(exe, new[] { "--ignore-config", "--no-colors", "--encoding", "utf-8", "--socket-timeout", "25", "--update" }, log, token, 300);
+            if (run == null || run.ExitCode != 0) { await Restore(backup, exe); throw new FlowException(ErrorCode.EngineUpdateFailed, run == null ? "timeout" : run.Error + run.Output, new[] { run == null ? "" : Last(run.Error) }); }
             result.NewVersion = await RunVersion(exe, token);
             string failure = null;
             if (result.NewVersion == null) failure = Loc.T("comp.fail.runs");
             else {
-                var list = await ProcessRunner.Run(exe, new[] { "--ignore-config", "--list-extractors" }, null, token, 120);
-                if (list.ExitCode != 0 || list.Output.Split('\n').Length < 500) failure = Loc.T("comp.fail.selftest");
+                var list = await RunOrNull(exe, new[] { "--ignore-config", "--list-extractors" }, null, token, 120);
+                if (list == null || list.ExitCode != 0 || list.Output.Split('\n').Length < 500) failure = Loc.T("comp.fail.selftest");
                 else if (workedBefore && referenceCheck != null && !await referenceCheck(exe, token)) failure = Loc.T("comp.fail.reference");
             }
             if (failure != null) {
-                Restore(backup, exe);
+                await Restore(backup, exe);
                 result.RolledBack = true; result.Reason = failure; result.NewVersion = await RunVersion(exe, token);
                 return result;
             }
@@ -138,7 +177,18 @@ namespace Flow {
             return result;
         }
         static string Last(string text) { return (text ?? "").Split('\n').Select(l => l.Trim()).LastOrDefault(l => l.Length > 0) ?? ""; }
-        static void Restore(string backup, string exe) { File.Copy(backup, exe, true); }
+        static async Task<ProcessResult> RunOrNull(string exe, string[] args, Action<string> log, CancellationToken token, int seconds) {
+            try { return await ProcessRunner.Run(exe, args, log, token, seconds); } catch (TimeoutException) { return null; }
+        }
+        // The engine or a scanner may hold the file for a moment after exiting, so a locked file is tried again.
+        internal static async Task Restore(string backup, string exe) {
+            for (int attempt = 0; ; attempt++) {
+                try { File.Copy(backup, exe, true); return; }
+                catch (IOException) { if (attempt >= 9) throw; }
+                catch (UnauthorizedAccessException) { if (attempt >= 9) throw; }
+                await Task.Delay(500);
+            }
+        }
 
         // Puts back the most recent previous engine, after checking that it runs.
         public static async Task<string> Rollback(string toolsDir, CancellationToken token) {
@@ -146,7 +196,7 @@ namespace Flow {
             if (backup == null) return null;
             var version = await RunVersion(backup, token);
             if (version == null) throw new FlowException(ErrorCode.EngineUpdateFailed, "backup does not run", new[] { Loc.T("comp.fail.runs") });
-            File.Copy(backup, Path.Combine(toolsDir, "yt-dlp.exe"), true);
+            await Restore(backup, Path.Combine(toolsDir, "yt-dlp.exe"));
             File.Delete(backup);
             return version;
         }

@@ -105,6 +105,12 @@ namespace Flow {
         public double Duration { get; set; }
         public string Status { get; set; }          // completed | failed | canceled | skipped
         public string Error { get; set; }           // ErrorCode name
+        public List<string> ErrorArgs { get; set; }
+        // What the job asked for (null on older entries); downloading it again asks for the same.
+        public string RequestedCodec { get; set; }
+        public int RequestedHeight { get; set; }
+        public int RequestedFps { get; set; }
+        public bool RequestedStrict { get; set; }
         public string Clip { get; set; }
         public int ItemIndex { get; set; }
         public bool Legacy { get; set; }

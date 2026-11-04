@@ -43,3 +43,18 @@ test('Opera-style missing sidePanel falls back to a tab and retains source tab I
   w.events.click({menuItemId:'flow-send-link',linkUrl:'https://example.com/video'},{id:9});
   assert.equal(w.order[0][0],'tab');assert.equal(w.order[0][1].url,w.panel+'?tab=9');assert.equal(w.stored.draft.url,'https://example.com/video');
 });
+test('the video button opens the side panel inside the click gesture',async()=>{
+  const w=worker(),page='https://example.com/page';
+  const sender={id:'flow',url:page,frameId:0,tab:{id:4,url:page}};
+  assert.equal(w.events.message({type:'scan-open',pageUrl:page,item:{url:'https://example.com/movie.mp4',kind:'video',title:'Movie'}},sender,()=>{}),true);
+  assert.equal(w.order[0][0],'open','opened before anything is awaited');assert.equal(w.order[0][1].tabId,4);
+  await settle();
+  assert.equal(w.stored.draft.url,'https://example.com/movie.mp4');assert.equal(w.order[1][0],'store');
+});
+test('a protected video or a document that moved on opens nothing',async()=>{
+  const w=worker(),page='https://example.com/page';let answer;
+  w.events.message({type:'scan-open',pageUrl:page,item:{url:'https://example.com/movie.mp4',kind:'video',protected:true}},{id:'flow',url:page,frameId:0,tab:{id:4,url:page}},r=>answer=r);
+  assert.equal(answer.ok,false);
+  w.events.message({type:'scan-open',pageUrl:page,item:{url:'https://example.com/movie.mp4',kind:'video'}},{id:'flow',url:page,frameId:0,tab:{id:4,url:'https://example.com/other'}},r=>answer=r);
+  assert.equal(answer.ok,false);assert.equal(w.order.length,0);
+});

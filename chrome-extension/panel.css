@@ -94,6 +94,7 @@ select:focus-visible { outline: none; border-bottom: 2px solid var(--accent); pa
 .job .error { color: var(--danger); }
 /* The numeral cell: the running percentage as the reversed plate, otherwise the state's mark. */
 .job .figure { position: absolute; left: 0; top: 0; width: 42px; padding: 12px 0 0 4px; font: 300 19px/24px var(--display); font-variant-numeric: tabular-nums; color: var(--text-muted); }
+.job .figure.full { font-size: 14px; }
 .job .figure:empty::before { font: 16px/24px "Segoe Fluent Icons", "Segoe MDL2 Assets"; content: "\E738"; }
 .job[data-state="completed"] .figure::before { content: "\E73E"; color: var(--success); }
 .job:is([data-state="failed"], [data-state="needs-action"]) .figure::before { content: "\E7BA"; color: var(--danger); }
@@ -111,6 +112,7 @@ select:focus-visible { outline: none; border-bottom: 2px solid var(--accent); pa
 
 footer { display: flex; align-items: center; gap: 12px; padding: 10px 18px 14px; border-top: 1px solid var(--border); font-size: 12px; }
 footer select { margin-left: auto; width: auto; font-size: 12px; padding: 4px 6px; min-height: 30px; }
+footer select:focus-visible { padding-bottom: 3px; }
 footer button { font-size: 12px; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
 
@@ -172,7 +174,8 @@ p, li { text-wrap: pretty; }
   .selection-bar { align-items: flex-start; } .batch-actions button { white-space: normal; }
 }
 @media (forced-colors: active) {
-  button, textarea, select, .job, .media-row { border: 1px solid ButtonText; }
+  button, textarea, select { border: 1px solid ButtonText; }
+  .job, .media-row { border: 0; border-bottom: 1px solid CanvasText; }
   select:focus-visible { outline: 2px solid Highlight; }
   .tab.selected { border-bottom-color: Highlight; }
   header, .connection { border-bottom: 1px solid CanvasText; }

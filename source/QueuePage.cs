@@ -84,7 +84,8 @@ namespace Flow {
                 Id = Guid.NewGuid().ToString("N"), Title = item.Title, Platform = job.Platform, SourceUrl = job.Url, ContentId = job.ContentId, Channel = job.Channel, MediaKind=job.MediaKind,Referrer=job.Referrer,
                 FilePath = job.State == JobState.Completed ? job.OutputPath : null, CompletedAt = Iso.Now(), SizeBytes = job.State == JobState.Completed ? job.ExpectedBytes : 0,
                 Format = job.Options.Format, Profile = job.Options.Profile, Width = job.Width, Height = job.Height, Duration = job.Duration,
-                Status = status, Error = job.State == JobState.Failed ? job.Error : null, ItemIndex = job.ItemIndex,
+                Status = status, Error = job.State == JobState.Failed ? job.Error : null, ErrorArgs = job.State == JobState.Failed ? job.ErrorArgs : null, ItemIndex = job.ItemIndex,
+                RequestedCodec = job.Options.Codec, RequestedHeight = job.Options.Height, RequestedFps = job.Options.FpsLimit, RequestedStrict = job.Options.Strict,
                 Clip = job.Options.HasClip ? Naming.ClipTag(job.Options.ClipStart, job.Options.ClipEnd) : null
             });
             if (history.Count > HistoryRules.Limit) history.RemoveRange(HistoryRules.Limit, history.Count - HistoryRules.Limit);

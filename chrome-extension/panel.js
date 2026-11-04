@@ -4,6 +4,13 @@ const $ = id => document.getElementById(id);
 let lang = (chrome.i18n.getUILanguage?.() || navigator.language || 'en').startsWith('tr') ? 'tr' : 'en';
 let t = translator(lang), online = false, busy = false, polling = false, tab = 'download', preview = null, generation = 0, submission = null;
 const nodes = new Map();
+const sourceTab = Number(new URLSearchParams(location.search).get('tab')) || null;
+// Opened as a tab (Opera, or when the side panel is refused) the active tab is the panel itself.
+async function pageTab() {
+  if (sourceTab != null) { try { return await chrome.tabs.get(sourceTab); } catch {} }
+  const [active] = await chrome.tabs.query({active:true, currentWindow:true});
+  return active;
+}
 let discoveryPanel=null,mediaContext={};
 const currentWindow = await chrome.windows.getCurrent();
 if (!new URLSearchParams(location.search).has('side')) {
@@ -51,7 +58,9 @@ async function connect(launch = false) {
   if(!result.data.capabilities?.includes('image-original')){setOnline(false,{code:'APP_UPGRADE'});return;}
   const preferences = await chrome.storage.local.get('language');
   lang = preferences.language || result.data.language || lang;
-  translate(); document.documentElement.dataset.theme = result.data.theme === 'dark' ? 'dark' : 'light';
+  const theme = result.data.theme === 'dark' ? 'dark' : 'light';
+  translate(); document.documentElement.dataset.theme = theme;
+  await chrome.storage.local.set({desktopLanguage:result.data.language, desktopTheme:theme});
   $('folder').textContent = result.data.folder || ''; setOnline(true); feedback('');
   await refreshQueue();
 }
@@ -83,10 +92,14 @@ function choiceSummary() {
   $('summary').textContent = [c.summary,size].filter(Boolean).join(' · ');
   $('warning').textContent = c.warning || (c.conversion ? t('conversion') : ''); $('warning').hidden = !$('warning').textContent;
 }
+function clock(seconds) {
+  const h = Math.floor(seconds/3600), m = Math.floor(seconds%3600/60), s = String(Math.floor(seconds%60)).padStart(2,'0');
+  return h ? `${h}:${String(m).padStart(2,'0')}:${s}` : `${m}:${s}`;
+}
 function showPreview(data, choice) {
   if (!data?.choices?.length) return;
   preview = data; $('preview').hidden = false; $('title').textContent = data.title; $('platform').textContent = data.platform;
-  $('duration').textContent = data.duration > 0 ? `${Math.floor(data.duration/60)}:${String(Math.floor(data.duration%60)).padStart(2,'0')}` : '';
+  $('duration').textContent = data.duration > 0 ? clock(data.duration) : '';
   $('folder').textContent = data.folder || '';
   formats(choice?.split(':')[0]); qualities(choice); updateButtons();
 }
@@ -124,7 +137,7 @@ function renderQueue(data) {
     keep.add(job.id); let n = nodes.get(job.id);
     if (!n) {
       const root = element('article','job'), figure = element('span','figure'), title = element('h2'), state = element('span','state'), progress = element('progress'), detail = element('p','muted'), error = element('p','error'), actions = element('div','actions');
-      progress.max = 100;
+      progress.max = 100; figure.setAttribute('aria-hidden','true');
       n = {root,figure,title,state,progress,detail,error,actions,buttons:{}};
       for (const action of ['pause','resume','retry','cancel']) {
         const button = element('button'); button.type = 'button'; button.addEventListener('click', async () => {
@@ -138,6 +151,7 @@ function renderQueue(data) {
     const running = ['inspecting','downloading','processing','verifying'].includes(job.state);
     // The numeral cell shows the running percentage; other states draw their mark from data-state in CSS.
     n.root.dataset.state = job.state; n.figure.textContent = running && job.progress != null ? Math.floor(job.progress) + '%' : '';
+    n.figure.classList.toggle('full', n.figure.textContent === '100%');
     n.progress.hidden = !running;
     n.progress.setAttribute('aria-label',job.title);
     if (job.progress == null) n.progress.removeAttribute('value'); else n.progress.value = job.progress;
@@ -155,7 +169,7 @@ async function refreshQueue() {
 $('inspectForm').addEventListener('submit', inspect);
 $('url').addEventListener('input', () => { generation++; mediaContext={}; clearPreview(); feedback(''); saveDraft(); });
 $('currentTab').addEventListener('click', async () => {
-  const [active] = await chrome.tabs.query({active:true, currentWindow:true});
+  const active = await pageTab();
   if (!active?.url || !/^https?:\/\//i.test(active.url)) { feedback(t('noPage'),true); return; }
   $('url').value = active.url; generation++;mediaContext={}; clearPreview(); await saveDraft(); feedback('');
 });
@@ -166,7 +180,7 @@ $('downloadTab').addEventListener('click',()=>view('download')); $('queueTab').a
 $('mediaTab').addEventListener('click',()=>view('media'));
 $('connect').addEventListener('click',()=>connect(true)); $('refresh').addEventListener('click',refreshQueue);
 $('show').addEventListener('click',async()=>{ accept(await send('show',{launch:true})); });
-$('sidePanel').addEventListener('click',()=>{ if(chrome.sidePanel?.open)chrome.sidePanel.open({windowId:currentWindow.id}).catch(()=>feedback(t('invalid'),true));else chrome.tabs.query({active:true,currentWindow:true}).then(([active])=>chrome.tabs.create({url:chrome.runtime.getURL('panel.html')+'?tab='+active.id})); });
+$('sidePanel').addEventListener('click',()=>{ if(chrome.sidePanel?.open)chrome.sidePanel.open({windowId:currentWindow.id}).catch(()=>feedback(t('invalid'),true));else chrome.tabs.query({active:true,currentWindow:true}).then(([active])=>chrome.tabs.create({url:chrome.runtime.getURL('panel.html')+(active?.id!=null?'?tab='+active.id:'')})); });
 $('language').addEventListener('change',async()=>{ lang=$('language').value; await chrome.storage.local.set({language:lang}); translate(); if(preview){const choice=$('quality').value;formats($('format').value);qualities(choice);} refreshQueue(); });
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'session' || !changes.draft) return;
@@ -187,6 +201,6 @@ translate();
 if (stored.draft) { $('url').value = stored.draft.url || ''; submission = stored.draft.submission;mediaContext={kind:stored.draft.kind,referrer:stored.draft.referrer,title:stored.draft.title}; if (stored.draft.preview && Date.now() - stored.draft.inspectedAt < 600000) showPreview(stored.draft.preview,stored.draft.choice); }
 updateButtons(); await connect();
 discoveryPanel=await initDiscovery({translate:key=>t(key),isOnline:()=>online,openDraft:async draft=>{generation++;clearPreview();mediaContext={kind:draft.kind,referrer:draft.referrer,title:draft.title};$('url').value=draft.url;view('download');await inspect();}});
-if(!stored.draft?.url)view('media');
+if(!$('url').value.trim())view('media');
 if(!chrome.sidePanel?.open)$('sidePanel').textContent=t('openPanel');
 setInterval(()=>{ if(tab==='queue' && document.visibilityState==='visible') refreshQueue(); },2500);

@@ -43,7 +43,7 @@ namespace FlowNative {
                     }
                     if (canLaunch) await Task.Delay(100).ConfigureAwait(false);
                 }
-                if (pipe == null) return BrowserProtocol.Error("APP_UNAVAILABLE");
+                if (pipe == null || !BrowserProtocol.OwnedByCurrentUser(pipe)) return BrowserProtocol.Error("APP_UNAVAILABLE");
                 using (var timeout = new CancellationTokenSource(195000))
                 using (timeout.Token.Register(() => { try { pipe.Dispose(); } catch (Exception) {} })) {
                     BrowserProtocol.Write(pipe, request);

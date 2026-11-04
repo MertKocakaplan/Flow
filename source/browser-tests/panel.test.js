@@ -17,7 +17,7 @@ const media=()=>({token:'preview-token',title:'<img src=x onerror=alert(1)> İst
   {key:'mp3:0',format:'mp3',height:0,conversion:true}
 ]});
 
-async function panel({reply,draft,language}={}) {
+async function panel({reply,draft,language,search='?side'}={}) {
   const {document,window}=parseHTML(html);
   // Linkedom intentionally omits single-select setters/default selection; emulate HTML semantics.
   for(const select of document.querySelectorAll('select'))Object.defineProperty(select,'value',{
@@ -32,17 +32,17 @@ async function panel({reply,draft,language}={}) {
   }]));
   storage.onChanged={addListener:f=>changes.push(f)};
   const chrome={storage,i18n:{getUILanguage:()=> 'tr'},windows:{getCurrent:async()=>({id:7})},
-    sidePanel:{open:async()=>{}},tabs:{query:async()=>[{url:'https://example.com/video'}]},
+    sidePanel:{open:async()=>{}},tabs:{query:async()=>[{url:search.includes('tab=')?'chrome-extension://id/panel.html':'https://example.com/video'}],get:async id=>({id,url:'https://example.com/page-'+id})},
     runtime:{getContexts:async()=>[],sendMessage:async({request})=>{
       requests.push(structuredClone(request));
-      const custom=await reply?.(request); if(custom!==undefined)return custom;
+      const custom=await reply?.(request,storage); if(custom!==undefined)return custom;
       if(request.action==='ping')return success({language:'tr',theme:'dark',folder:'C:\\Downloads',capabilities:['image-original']});
       if(request.action==='queue')return success({items:[],total:0,active:0});
       if(request.action==='inspect')return success(media());
       return success({jobId:'job-1'});
     }}
   };
-  const context=vm.createContext({document,chrome,location:{search:'?side',href:'chrome-extension://id/panel.html?side'},translator,errorText,crypto:webcrypto,URLSearchParams,Intl,confirm:()=>true,setInterval:()=>0,initDiscovery:async()=>({translate(){},refreshButtons(){},refresh(){}})});
+  const context=vm.createContext({document,chrome,location:{search,href:'chrome-extension://id/panel.html'+search},translator,errorText,crypto:webcrypto,URLSearchParams,Intl,confirm:()=>true,setInterval:()=>0,initDiscovery:async()=>({translate(){},refreshButtons(){},refresh(){}})});
   await new vm.Script('(async()=>{'+script+'\n})()').runInContext(context);
   await tick();
   const get=id=>document.getElementById(id);
@@ -127,4 +127,29 @@ test('queue rows carry their state and the running percentage in the numeral cel
   const jobs=[...p.get('jobs').children];
   assert.deepEqual(jobs.map(j=>j.dataset.state),items.map(i=>i.state));
   assert.deepEqual(jobs.map(j=>j.querySelector('.figure')?.textContent),['62%','','','','']);
+});
+test('a panel opened as a tab uses the page it was opened for',async()=>{
+  const p=await panel({search:'?tab=42'});await p.event('currentTab');
+  assert.equal(p.get('url').value,'https://example.com/page-42');assert.equal(p.get('feedback').hidden,true);
+});
+test('durations of an hour or more show hours',async()=>{
+  const long={...media(),duration:3725};
+  const p=await panel({reply:request=>request.action==='inspect'?success(long):undefined});
+  p.get('url').value='https://example.com/long';await p.event('inspectForm','submit');
+  assert.equal(p.get('duration').textContent,'1:02:05');
+});
+test('a link arriving while connecting keeps the download view',async()=>{
+  const p=await panel({reply:async(request,storage)=>{if(request.action==='ping')await storage.session.set({draft:{url:'https://example.com/late'}});}});
+  await tick();
+  assert.equal(p.get('url').value,'https://example.com/late');
+  assert.equal(p.get('downloadView').hidden,false);assert.equal(p.get('mediaView').hidden,true);
+});
+test('the numeral cell is hidden from screen readers and shrinks at 100%',async()=>{
+  const job={id:'j',title:'T',state:'processing',stateText:'',detail:'',error:'',progress:100};
+  const p=await panel({reply:request=>request.action==='queue'?success({items:[job],total:1,active:1}):undefined});
+  const figure=p.document.querySelector('.figure');
+  assert.equal(figure.getAttribute('aria-hidden'),'true');assert.equal(figure.textContent,'100%');assert.ok(figure.classList.contains('full'));
+});
+test('the desktop language and theme are saved for the setup page',async()=>{
+  const p=await panel();assert.equal(p.state.local.desktopLanguage,'tr');assert.equal(p.state.local.desktopTheme,'dark');
 });

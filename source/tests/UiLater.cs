@@ -17,6 +17,7 @@ namespace FlowTests {
             Stage5Ui();
             Stage6Ui();
             Stage7Ui();
+            FixUi();
         }
 
         static void Stage3Ui() {

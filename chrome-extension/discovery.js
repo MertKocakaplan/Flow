@@ -95,8 +95,10 @@ export class Discovery {
       if(this.merge(state,item)){state.updated=Date.now();await this.persist();await this.badge(tab.id);}
     }
   }
-  async navigate(details){
+  async navigate(details,sameDocument=false){
     if(details.frameId!==0)return;
+    // Single-page sites rewrite their history without moving; the list and a manual scan stay. webUrl drops the hash.
+    if(sameDocument&&this.tabs[details.tabId]&&this.tabs[details.tabId].url===webUrl(details.url))return;
     delete this.tabs[details.tabId];if(this.config.enabled)await this.ensure(details.tabId,details.url,details.timeStamp);await this.persist();await this.badge(details.tabId);
     try{await this.api.tabs.sendMessage(details.tabId,{type:'scan-config',...this.config});}catch{}
   }

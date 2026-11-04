@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.IO.Pipes;
 using System.Security.Cryptography;
 using System.Security.Principal;
 using System.Text;
@@ -23,6 +24,12 @@ namespace Flow.BrowserIntegration {
         public static string PipeName(string directory) {
             var identity = WindowsIdentity.GetCurrent().User.Value + "|" + Path.GetFullPath(directory).TrimEnd('\\').ToUpperInvariant();
             using (var sha = SHA256.Create()) return "Flow.Browser.v1." + BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(identity))).Replace("-", "").Substring(0, 32);
+        }
+        // The host only talks to a server of this account: someone else could otherwise answer on a pipe of the same
+        // name. Administrators is accepted because an elevated Flow owns its objects through that group.
+        public static bool OwnedByCurrentUser(PipeStream pipe) {
+            var owner = pipe.GetAccessControl().GetOwner(typeof(SecurityIdentifier)) as SecurityIdentifier;
+            return owner != null && (owner == WindowsIdentity.GetCurrent().User || owner.IsWellKnown(WellKnownSidType.BuiltinAdministratorsSid));
         }
         public static string Read(Stream input, int limit) {
             var header = new byte[4]; int first = input.ReadByte(); if (first < 0) return null;

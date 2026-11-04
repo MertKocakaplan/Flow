@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace Flow {
     // All Flow texts live in Strings.Table as { key, Turkish, English }.
@@ -44,7 +45,10 @@ namespace Flow {
         public static string Error(ErrorCode code, params object[] args) {
             var key = "err." + code;
             if (!Has(key)) key = "err.Unknown";
-            try { return F(key, args ?? new object[0]); } catch (FormatException) { return T(key); }
+            // An argument may be a text key, stored as such so it follows the language.
+            var shown = (args ?? new object[0]).Select(a => { var s = a as string; return s != null && Has(s) ? T(s) : a; }).ToArray();
+            // Records saved without their arguments lose the placeholder, never show it raw.
+            try { return F(key, shown); } catch (FormatException) { return Regex.Replace(T(key), @"[\s:]*\{\d+\}", "").Trim(); }
         }
         public static string Error(Exception ex) {
             var flow = ex as FlowException;

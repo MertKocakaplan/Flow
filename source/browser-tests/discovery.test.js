@@ -83,3 +83,10 @@ test('stopping a batch prevents enqueue after an in-flight inspection',async()=>
   await add(h,[{url:'/a.mp4',kind:'video'}]);await h.d.startBatch(9,[h.d.tabs[9].items[0].id],false);await tick();h.d.batch.stop=true;
   finish({ok:true,data:{token:'a',choices:[{format:'mp4',key:'mp4:720'}]}});await tick();assert.equal(h.d.batch.state,'stopped');assert.equal(requests.length,1);
 });
+test('a history update on the same address keeps the list and a manual scan',async()=>{
+  const h=harness(false);await h.d.scan(9);await add(h,[{url:'/movie.mp4',kind:'video'}]);
+  await h.d.navigate({tabId:9,frameId:0,url:page+'#chapter',timeStamp:Date.now()},true);
+  assert.equal(h.d.tabs[9].items.length,1);assert.equal(h.d.tabs[9].manual,true);
+  await h.d.navigate({tabId:9,frameId:0,url:'https://example.com/next',timeStamp:Date.now()},true);
+  assert.equal(h.d.tabs[9],undefined,'a new address on a single-page site is a new page');
+});

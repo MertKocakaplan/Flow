@@ -56,7 +56,8 @@ namespace Flow {
             string text = null;
             try { if (File.Exists(file)) text = File.ReadAllText(file, Encoding.UTF8); } catch (IOException) {}
             if (text == null) {
-                var r = await ProcessRunner.Run(Engine.Exe, new[] { "--ignore-config", "--list-extractors" }, null, token, 120);
+                ProcessResult r;
+                using (await EngineGate.Enter(token)) r = await ProcessRunner.Run(Engine.Exe, new[] { "--ignore-config", "--list-extractors" }, null, token, 120);
                 if (r.ExitCode != 0) throw new FlowException(Engine.Classify(r.Error), r.Error);
                 text = r.Output;
                 try { Directory.CreateDirectory(cacheDir); File.WriteAllText(file, text, new UTF8Encoding(false)); } catch (IOException) {} catch (UnauthorizedAccessException) {}

@@ -12,6 +12,7 @@ namespace Flow {
     public sealed class ProcessResult { public int ExitCode; public string Output; public string Error; }
 
     public static class ProcessRunner {
+        const int TailCharacters = 256 * 1024;
         public static async Task<ProcessResult> Run(string exe, IEnumerable<string> args, Action<string> line, CancellationToken token, int timeoutSeconds) {
             token.ThrowIfCancellationRequested();
             var start = new ProcessStartInfo(exe, string.Join(" ", args.Select(Engine.Quote))) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true, StandardOutputEncoding = Encoding.UTF8, StandardErrorEncoding = Encoding.UTF8, WorkingDirectory = Path.GetDirectoryName(exe) };
@@ -44,9 +45,14 @@ namespace Flow {
         static async Task Read(StreamReader reader, StringBuilder buffer, Action<string> callback) {
             string line;
             while ((line = await reader.ReadLineAsync().ConfigureAwait(false)) != null) {
-                // Keep metadata intact; cap diagnostic accumulation for long downloads.
-                if (buffer.Length < 28 * 1024 * 1024) buffer.AppendLine(line);
-                if (callback != null) callback(line);
+                // Metadata reads have no callback and keep everything. A caller that takes lines as they come
+                // (hours of progress in a long download) only needs the tail, for the closing error.
+                if (callback == null) { if (buffer.Length < 28 * 1024 * 1024) buffer.AppendLine(line); }
+                else {
+                    buffer.AppendLine(line);
+                    if (buffer.Length > TailCharacters * 2) buffer.Remove(0, buffer.Length - TailCharacters);
+                    callback(line);
+                }
             }
         }
     }

@@ -14,6 +14,7 @@ namespace Flow {
         internal string ToolsDir = Engine.ToolsDir;
         List<ExtractorRow> extractors;
         bool componentsBusy;
+        const int ReadWaitMilliseconds = 60000;   // a preview or list read normally ends well within this
         public List<ComponentStatus> ComponentRows { get { return C<ItemsControl>("ComponentList").ItemsSource as List<ComponentStatus> ?? new List<ComponentStatus>(); } }
 
         void InitStage7() {
@@ -74,13 +75,16 @@ namespace Flow {
             if (queue.ActiveCount > 0) { C<TextBlock>("ComponentStatusText").Text = Loc.Error(ErrorCode.UpdateBusy); ShowMessage(Loc.Error(ErrorCode.UpdateBusy), true); return null; }
             SetComponentsBusy(true, Loc.T("msg.engine.updating"));
             UpdateResult result = null;
+            queue.Held = true;
             try {
+                await EngineGate.BeginUpdate(ReadWaitMilliseconds);
                 result = await Components.UpdateEngine(ToolsDir, () => queue.ActiveCount, ReferenceCheck, Log, CancellationToken.None);
                 string text = result.RolledBack ? Loc.F("comp.rolledBack", result.Reason, result.NewVersion) : result.Changed ? Loc.F("comp.updatedTo", result.OldVersion, result.NewVersion) : Loc.F("comp.upToDate", result.NewVersion);
                 SetComponentsBusy(false, text);
                 ShowMessage(text, result.RolledBack);
                 extractors = null;
             } catch (Exception ex) { Log(ex.ToString()); SetComponentsBusy(false, Loc.Error(ex)); ShowMessage(Loc.Error(ex), true); }
+            finally { EngineGate.EndUpdate(); queue.Held = false; queue.Pump(); }
             await CheckComponentsAsync();
             return result;
         }
@@ -96,11 +100,14 @@ namespace Flow {
             if (componentsBusy) return;
             if (queue.ActiveCount > 0) { C<TextBlock>("ComponentStatusText").Text = Loc.Error(ErrorCode.UpdateBusy); return; }
             SetComponentsBusy(true, null);
+            queue.Held = true;
             try {
+                await EngineGate.BeginUpdate(ReadWaitMilliseconds);
                 var version = await Components.Rollback(ToolsDir, CancellationToken.None);
                 SetComponentsBusy(false, version == null ? "" : Loc.F("comp.restored", version));
                 extractors = null;
             } catch (Exception ex) { SetComponentsBusy(false, Loc.Error(ex)); }
+            finally { EngineGate.EndUpdate(); queue.Held = false; queue.Pump(); }
             await CheckComponentsAsync();
         }
 

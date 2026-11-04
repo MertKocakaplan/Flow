@@ -36,15 +36,18 @@ namespace Flow {
     }
 
     public static partial class Engine {
+        // Language keys come from the site. A leading "-" or a comma would mean something to the engine.
+        public static bool SafeSubLang(string key) { return key != null && System.Text.RegularExpressions.Regex.IsMatch(key, @"^[A-Za-z0-9][A-Za-z0-9_-]{0,31}\z"); }
         static partial void AddExtras(List<string> args, DownloadJob job, Selection selection) {
             var o = job.Options;
             // Subtitles are skipped for clips: they would not match the cut.
-            if (o.SubLangs != null && o.SubLangs.Count > 0 && !o.HasClip) {
+            var langs = (o.SubLangs ?? new List<string>()).Where(SafeSubLang).ToList();
+            if (langs.Count > 0 && !o.HasClip) {
                 bool embed = o.SubMode == "embed" && !o.IsAudio;
                 if (embed) args.Add("--embed-subs");
                 else args.AddRange(new[] { "--write-subs", "--sub-format", "srt/vtt/best", "--convert-subs", "srt" });
                 if (o.SubAuto) args.Add("--write-auto-subs");
-                args.AddRange(new[] { "--sub-langs", string.Join(",", o.SubLangs) });
+                args.AddRange(new[] { "--sub-langs", string.Join(",", langs) });
             }
             if (o.HasClip && job.ClipMethod != "local") {
                 args.AddRange(new[] { "--download-sections", "*" + ClipTime.Engine(o.ClipStart) + "-" + ClipTime.Engine(o.ClipEnd) });

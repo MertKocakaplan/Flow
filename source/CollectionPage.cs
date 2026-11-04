@@ -117,7 +117,8 @@ namespace Flow {
 
         static async Task<string> ReadCollection(string url, bool flat, int start, int end, CancellationToken token) {
             Engine.EnsureTools();
-            var result = await ProcessRunner.Run(Engine.Exe, Engine.ListArgs(url, flat, start, end), null, token, 300);
+            ProcessResult result;
+            using (await EngineGate.Enter(token)) result = await ProcessRunner.Run(Engine.Exe, Engine.ListArgs(url, flat, start, end), null, token, 300);
             if (result.ExitCode != 0) throw new FlowException(Engine.Classify(result.Error), result.Error);
             return result.Output;
         }

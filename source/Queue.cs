@@ -173,7 +173,7 @@ namespace Flow {
         public bool CanMove { get { return !JobState.IsFinished(Job.State); } }
         public bool CanReveal { get { return Job.State == JobState.Completed && !string.IsNullOrEmpty(Job.OutputPath); } }
         public bool CanFixFolder { get { var c = Code; return (Job.State == JobState.NeedsAction || Job.State == JobState.Failed) && (c == ErrorCode.WriteDenied || c == ErrorCode.DiskFull || c == ErrorCode.DiskSpaceLow || c == ErrorCode.PathTooLong || c == ErrorCode.FolderInvalid); } }
-        public bool CanFixFormat { get { var c = Code; return (Job.State == JobState.NeedsAction || Job.State == JobState.Failed) && (c == ErrorCode.FormatUnavailable || c == ErrorCode.QualityUnavailable || c == ErrorCode.NoAudio || c == ErrorCode.VerifyFailed); } }
+        public bool CanFixFormat { get { var c = Code; return Job.MediaKind != "image" && (Job.State == JobState.NeedsAction || Job.State == JobState.Failed) && (c == ErrorCode.FormatUnavailable || c == ErrorCode.QualityUnavailable || c == ErrorCode.NoAudio || c == ErrorCode.VerifyFailed); } }
         public bool CanCopy { get { return HasError || log.Length > 0; } }
         public string Diagnostics {
             get {
@@ -199,6 +199,8 @@ namespace Flow {
         readonly IJobExecutor executor;
         readonly DispatcherTimer tick, saver;
         bool shuttingDown;
+        // While the engine is being replaced nothing new may start; waiting jobs start when it is released.
+        public bool Held { get; set; }
         List<BrowserReceipt> browserReceipts = new List<BrowserReceipt>();
         public LoadResult LoadInfo { get; private set; }
         public static readonly int[] Backoff = { 15, 60, 180, 300, 600 };
@@ -325,7 +327,13 @@ namespace Flow {
         }
         public void PauseAll() { foreach (var i in Items.ToList()) if (i.CanPause) Pause(i); }
         public void ResumeAll() { foreach (var i in Items.ToList()) if (i.Job.State == JobState.Paused) Resume(i); }
-        public void ClearFinished() { foreach (var i in Items.Where(x => JobState.IsFinished(x.Job.State)).ToList()) Items.Remove(i); Commit(); }
+        public void ClearFinished() {
+            foreach (var i in Items.Where(x => JobState.IsFinished(x.Job.State)).ToList()) {
+                if (i.Job.State != JobState.Completed) EngineExecutor.TryDelete(i.Job.TempDir, i.Job.Id);
+                Items.Remove(i);
+            }
+            Commit();
+        }
         public void ChangeFolder(JobItem item, string folder) {
             if (item.IsActive) return;
             EngineExecutor.TryDelete(item.Job.TempDir, item.Job.Id);
@@ -338,8 +346,9 @@ namespace Flow {
             var o = item.Job.Options; ErrorCode code; Enum.TryParse(item.Job.Error ?? "", out code);
             if (code == ErrorCode.NoAudio) { o.Format = "mp4"; o.Profile = "custom"; o.Codec = "auto"; }
             else if (code == ErrorCode.QualityUnavailable) o.Strict = false;
+            else if (o.IsAudio) { o.Format = o.Format == "mp3" ? "m4a" : "mp3"; o.Profile = o.Format; }   // audio stays audio
             else { o.Format = "mkv"; o.Profile = "best"; o.Codec = "auto"; o.Height = 0; o.Strict = false; }
-            item.Job.ResolvedFormat = null; item.Job.Error = null; item.Job.State = JobState.Queued; item.Job.Attempts = 0;
+            item.Job.ResolvedFormat = null; item.Job.Error = null; item.Job.ErrorArgs = null; item.Job.State = JobState.Queued; item.Job.Attempts = 0;
             item.Refresh(); Commit();
         }
         void Commit() { ScheduleSave(); RaiseChanged(); Pump(); }
@@ -362,6 +371,7 @@ namespace Flow {
                 }
                 else if (job.State == JobState.Retry) { var at = Iso.Parse(job.NextRetryAt); if (!at.HasValue || at.Value <= now) { job.State = JobState.Queued; item.Refresh(); ScheduleSave(); } }
             }
+            if (Held) return;
             int limit = Math.Max(1, Math.Min(3, settings().Parallel));
             int running = ActiveCount;
             foreach (var item in Items.ToList()) {

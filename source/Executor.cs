@@ -54,7 +54,8 @@ namespace Flow {
         }
         public static async Task<MediaInfo> Inspect(string url, Platform fallback, int itemIndex, CancellationToken token,string referrer) {
             Engine.EnsureTools();
-            var result = await ProcessRunner.Run(Engine.Exe, Engine.InspectArgs(url, itemIndex,referrer), null, token, 180);
+            ProcessResult result;
+            using (await EngineGate.Enter(token)) result = await ProcessRunner.Run(Engine.Exe, Engine.InspectArgs(url, itemIndex,referrer), null, token, 180);
             if (result.ExitCode != 0) throw new FlowException(Engine.Classify(result.Error), result.Error);
             var info = MediaParser.Parse(result.Output, fallback);
             if (info.IsLive) throw new FlowException(ErrorCode.Live);
@@ -106,7 +107,7 @@ namespace Flow {
             string[] run = null;
             bool fallback = false;
             try {
-                run = await Download(item, context, selection, byFlow ? job.TempDir : folder, byFlow ? "source" : finalBase, note, token);
+                run = await Download(item, context, selection, byFlow ? job.TempDir : folder, byFlow ? "source" : finalBase, note, info.Duration, token);
             } catch (FlowException ex) {
                 // Some sources cannot serve a range directly: download everything and cut locally, and say so.
                 if (!o.HasClip || local || ex.Code != ErrorCode.Unknown) throw;
@@ -116,7 +117,7 @@ namespace Flow {
                 job.ClipMethod = "local"; local = true; byFlow = true;
                 ClearParts(job.TempDir);
                 context.Post(() => { job.Note = "note.clipLocal"; item.Refresh(); });
-                run = await Download(item, context, selection, job.TempDir, "source", null, token);
+                run = await Download(item, context, selection, job.TempDir, "source", null, info.Duration, token);
             }
             saved = run[0]; actualFormat = run[1];
             if (string.IsNullOrEmpty(saved) || !File.Exists(saved)) throw new FlowException(ErrorCode.OutputMissing);
@@ -129,7 +130,9 @@ namespace Flow {
                 string mode = !convert && (!local || o.ClipMode != "precise") ? "copy" : o.IsAudio ? o.Format : "h264";
                 context.Post(() => item.SetStage(JobState.Processing, local ? "stage.cut" : "stage.convert"));
                 var produced = Path.Combine(job.TempDir, "result." + ext);
-                await Transcode(saved, produced, mode, local ? o.ClipStart : 0, local ? o.ClipEnd : 0, info.Duration, token, percent => context.Post(() => item.ApplyStagePercent(percent)), context.Log);
+                // A clip fetched directly is only that long; the whole video's length would stop the percentage short of 100.
+                double length = o.HasClip && !local ? o.ClipEnd - o.ClipStart : info.Duration;
+                await Transcode(saved, produced, mode, local ? o.ClipStart : 0, local ? o.ClipEnd : 0, length, token, percent => context.Post(() => item.ApplyStagePercent(percent)), context.Log);
                 if (File.Exists(target)) target = Naming.Unique(folder, finalBase, ext, p => File.Exists(p) || context.ReservedByOther(p, job.Id));
                 File.Move(produced, target);
                 MoveSubtitles(job.TempDir, "source", folder, Path.GetFileNameWithoutExtension(target));
@@ -152,12 +155,13 @@ namespace Flow {
         }
 
         // One engine run. Returns { saved path, actual format }.
-        async Task<string[]> Download(JobItem item, JobContext context, Selection selection, string homeDir, string baseName, string note, CancellationToken token) {
+        async Task<string[]> Download(JobItem item, JobContext context, Selection selection, string homeDir, string baseName, string note, double duration, CancellationToken token) {
             var job = item.Job;
             context.Post(() => item.SetStage(JobState.Downloading, "stage.download"));
             string saved = null, actualFormat = null;
             bool firstProgress = true;
-            var tracker = new ProgressTracker(selection);
+            // A bit rate estimates the whole file, so a clip waits for the sizes the engine reports.
+            var tracker = new ProgressTracker(selection, job.Options.HasClip ? 0 : duration);
             var args = Engine.JobArgs(job, selection, homeDir, baseName, job.TempDir);
             context.Log("Flow: " + string.Join(" ", args.Where(a => !a.StartsWith("http")).Select(a => a.Contains(" ") ? "\"" + a + "\"" : a)));
             var result = await ProcessRunner.Run(Engine.Exe, args, line => {
@@ -185,7 +189,7 @@ namespace Flow {
             return new[] { saved, actualFormat };
         }
 
-        static void Prepare(string folder) {
+        internal static void Prepare(string folder) {
             if (string.IsNullOrWhiteSpace(folder) || !Path.IsPathRooted(folder)) throw new FlowException(ErrorCode.FolderInvalid);
             try {
                 Directory.CreateDirectory(folder);
@@ -224,7 +228,7 @@ namespace Flow {
 
         public static async Task<ProbeResult> Probe(string path, CancellationToken token) {
             var result = await ProcessRunner.Run(Engine.FfprobeExe, new[] { "-v", "error", "-print_format", "json", "-show_format", "-show_streams", path }, null, token, 120);
-            if (result.ExitCode != 0) throw new FlowException(ErrorCode.VerifyFailed, result.Error, new[] { Loc.T("verify.unreadable") });
+            if (result.ExitCode != 0) throw new FlowException(ErrorCode.VerifyFailed, result.Error, new[] { "verify.unreadable" });
             return ParseProbe(result.Output, new FileInfo(path).Length);
         }
         public static ProbeResult ParseProbe(string json, long size) {
@@ -250,7 +254,7 @@ namespace Flow {
 
         // "Completed" only after the file really contains what was chosen.
         public static void Verify(JobOptions options, Selection selection, MediaInfo media, ProbeResult probe) {
-            Func<string, FlowException> fail = key => new FlowException(ErrorCode.VerifyFailed, key, new[] { Loc.T(key) });
+            Func<string, FlowException> fail = key => new FlowException(ErrorCode.VerifyFailed, key, new[] { key });
             if (probe.Size <= 0) throw fail("verify.empty");
             if (options.IsAudio) {
                 if (!probe.HasAudio) throw fail("verify.noAudio");
@@ -276,9 +280,9 @@ namespace Flow {
         readonly List<double> totals = new List<double>(), done = new List<double>();
         readonly List<bool> video = new List<bool>();
         int current = -1;
-        public ProgressTracker(Selection s) {
-            if (s.Video != null) Add(s.Video.Id, s.Video.Size(0) > 0 ? s.Video.Size(0) : -1, true);
-            if (s.Audio != null) Add(s.Audio.Id, s.Audio.Size(0) > 0 ? s.Audio.Size(0) : -1, false);
+        public ProgressTracker(Selection s, double duration = 0) {
+            if (s.Video != null) Add(s.Video.Id, s.Video.Size(duration) > 0 ? s.Video.Size(duration) : -1, true);
+            if (s.Audio != null) Add(s.Audio.Id, s.Audio.Size(duration) > 0 ? s.Audio.Size(duration) : -1, false);
             if (s.Video == null && s.Audio == null) Add("?", -1, true);
         }
         void Add(string id, double total, bool isVideo) { ids.Add(id); totals.Add(total); done.Add(0); video.Add(isVideo); }

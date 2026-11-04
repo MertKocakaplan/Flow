@@ -54,7 +54,15 @@ namespace Flow {
         static string Schtasks { get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "schtasks.exe"); } }
         static int Run(params string[] args) {
             var start = new ProcessStartInfo(Schtasks, string.Join(" ", args.Select(Engine.Quote))) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
-            using (var p = Process.Start(start)) { p.StandardOutput.ReadToEnd(); p.StandardError.ReadToEnd(); p.WaitForExit(15000); return p.HasExited ? p.ExitCode : -1; }
+            using (var p = new Process { StartInfo = start }) {
+                p.OutputDataReceived += (s, e) => {};
+                p.ErrorDataReceived += (s, e) => {};
+                p.Start();
+                p.BeginOutputReadLine(); p.BeginErrorReadLine();
+                if (!p.WaitForExit(15000)) { try { p.Kill(); } catch (Exception) {} return -1; }
+                p.WaitForExit();   // lets the asynchronous readers finish
+                return p.ExitCode;
+            }
         }
         public void Register(string name, string xml) {
             var file = Path.Combine(Path.GetTempPath(), "flow-task-" + Guid.NewGuid().ToString("N") + ".xml");

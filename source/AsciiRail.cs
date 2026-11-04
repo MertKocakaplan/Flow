@@ -33,6 +33,7 @@ namespace Flow {
         void Restyle() { if (Theme.Current == "contrast") Sleep(); else Start(); InvalidateVisual(); }
 
         public bool IsAnimating { get { return running; } }
+        public int CanvasHeight { get { return canvas == null ? 0 : canvasH; } }
 
         // Fades the field in and sets it drifting; with Windows animations off it shows one still frame.
         public void Start() {
@@ -47,7 +48,7 @@ namespace Flow {
             clock += seconds;
             fade = Math.Min(1, fade + seconds / FadeInSeconds);
             // Same size: repaint the bitmap in place, no new render pass; otherwise lay it out again.
-            if (canvas != null && canvasW == (int)Math.Ceiling(ActualWidth * cacheDip) && canvasTop == (int)Math.Floor(FieldTop * cacheDip)) Paint(); else InvalidateVisual();
+            if (canvas != null && canvasW == (int)Math.Ceiling(ActualWidth * cacheDip) && canvasTop == (int)Math.Floor(FieldTop * cacheDip) && canvasH == (int)Math.Ceiling(ActualHeight * cacheDip) - canvasTop) Paint(); else InvalidateVisual();
         }
 
         void Wake() { if (running) return; running = true; last = TimeSpan.Zero; CompositionTarget.Rendering += OnFrame; }

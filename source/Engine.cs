@@ -192,8 +192,11 @@ namespace Flow {
             var lines = text.Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0).ToList();
             var errors = lines.Where(l => l.StartsWith("ERROR:", StringComparison.Ordinal)).ToList();
             var lower = (errors.Count > 0 ? string.Join("\n", errors) : text).ToLowerInvariant();
+            // "ERROR: [site] <id>: message": the id and any address can contain anything, such as "drm".
+            lower = Regex.Replace(lower, @"^error:\s*\[[^\]]+\]\s*(?:[^\s:]+:\s)?", "error: ", RegexOptions.Multiline);
+            lower = Regex.Replace(lower, @"https?://\S+", "");
             if (lower.Contains("unsupported url") || lower.Contains("no suitable extractor")) return ErrorCode.Unsupported;
-            if (lower.Contains("drm")) return ErrorCode.Drm;
+            if (Regex.IsMatch(lower, @"\bdrm\b")) return ErrorCode.Drm;
             if (lower.Contains("ip address is blocked") || lower.Contains("ip has been blocked") || (lower.Contains("your ip") && lower.Contains("blocked"))) return ErrorCode.IpBlocked;
             if (lower.Contains("no space left") || lower.Contains("disk full") || lower.Contains("errno 28") || lower.Contains("not enough space")) return ErrorCode.DiskFull;
             if (lower.Contains("permission denied") || lower.Contains("access is denied") || lower.Contains("errno 13")) return ErrorCode.WriteDenied;
@@ -205,7 +208,7 @@ namespace Flow {
             if (lower.Contains("http error 429") || lower.Contains("too many requests")) return ErrorCode.RateLimited;
             if (lower.Contains("private video") || lower.Contains("video unavailable") || lower.Contains("not available") || lower.Contains("unavailable") || lower.Contains("has been removed") || lower.Contains("does not exist") || lower.Contains("http error 404") || lower.Contains("http error 410")) return ErrorCode.Unavailable;
             if (lower.Contains("http error 403")) return ErrorCode.Forbidden;
-            if (lower.Contains("timed out") || lower.Contains("getaddrinfo") || lower.Contains("failed to resolve") || lower.Contains("unable to resolve") || lower.Contains("connection") || lower.Contains("network is unreachable") || lower.Contains("remote end closed") || lower.Contains("ssl") || lower.Contains("proxy") || Regex.IsMatch(lower, @"http error 5\d\d") || lower.Contains("incomplete read") || lower.Contains("content too short")) return ErrorCode.Network;
+            if (lower.Contains("timed out") || lower.Contains("getaddrinfo") || lower.Contains("failed to resolve") || lower.Contains("unable to resolve") || lower.Contains("connection") || lower.Contains("network is unreachable") || lower.Contains("remote end closed") || Regex.IsMatch(lower, @"\b(ssl|proxy)") || Regex.IsMatch(lower, @"http error 5\d\d") || lower.Contains("incomplete read") || lower.Contains("content too short")) return ErrorCode.Network;
             return ErrorCode.Unknown;
         }
 
