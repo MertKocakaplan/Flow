@@ -41,8 +41,9 @@ namespace FlowTests {
             var clipped = new List<string>();
             foreach (var button in Visuals(root).OfType<System.Windows.Controls.Primitives.ButtonBase>().Where(b => b.IsVisible)) {
                 foreach (var text in Visuals(button).OfType<TextBlock>().Where(t => t.IsVisible && !string.IsNullOrEmpty(t.Text))) {
-                    var formatted = new FormattedText(text.Text, Loc.Culture, text.FlowDirection, new Typeface(text.FontFamily, text.FontStyle, text.FontWeight, text.FontStretch), text.FontSize, Brushes.Black, VisualTreeHelper.GetDpi(text).PixelsPerDip);
-                    if (formatted.Width > text.ActualWidth + 0.5) clipped.Add((string.IsNullOrEmpty(button.Name) ? "" : button.Name + ":") + text.Text);
+                    // Measure the way the window draws text (Display mode at the window's DPI); allow one pixel of glyph rounding.
+                    var formatted = new FormattedText(text.Text, Loc.Culture, text.FlowDirection, new Typeface(text.FontFamily, text.FontStyle, text.FontWeight, text.FontStretch), text.FontSize, Brushes.Black, null, TextOptions.GetTextFormattingMode(text), VisualTreeHelper.GetDpi(text).PixelsPerDip);
+                    if (formatted.Width > text.ActualWidth + 1.0) clipped.Add((string.IsNullOrEmpty(button.Name) ? "" : button.Name + ":") + text.Text);
                 }
             }
             return clipped;
@@ -67,6 +68,52 @@ namespace FlowTests {
         static void RedesignChecks() {
             ShellChecks();
             DownloadChecks();
+            QueueChecks();
+        }
+
+        static T TemplatePart<T>(ItemsControl list, object item, string name) where T : class {
+            var presenter = list.ItemContainerGenerator.ContainerFromItem(item) as ContentPresenter;
+            return presenter == null ? null : presenter.ContentTemplate.FindName(name, presenter) as T;
+        }
+
+        static void PageFits(Controller c, string pageName, string label) {
+            var w = c.Window;
+            Resize(w, 760, 560);
+            var page = Find<ScrollViewer>(w, pageName);
+            foreach (var language in new[] { "tr", "en" }) {
+                Loc.Set(language); Pump();
+                var clipped = ClippedButtons(page);
+                T.Check(clipped.Count == 0 && page.ComputedHorizontalScrollBarVisibility != Visibility.Visible && ((FrameworkElement)page.Content).ActualWidth <= page.ViewportWidth + 1,
+                    label + " 760×560'ta kırpılmıyor ve taşmıyor (" + language + ")" + (clipped.Count == 0 ? "" : ": " + string.Join(", ", clipped)));
+            }
+            Loc.Set("tr"); Pump();
+        }
+
+        static void QueueChecks() {
+            var c = OpenWith("ui-redesign-queue", "light", 1180, 840);
+            var w = c.Window;
+            LoadPreview(c, null);
+            ShotQueue(c);
+            c.ShowPage("queue"); Pump();
+            var list = Find<ItemsControl>(w, "QueueList");
+            var states = new[] { JobState.Completed, JobState.Downloading, JobState.Paused, JobState.Failed };
+            var colours = states.Select(s => {
+                var item = c.Queue.Items.FirstOrDefault(i => i.Job.State == s);
+                var label = item == null ? null : TemplatePart<TextBlock>(list, item, "StateLabel");
+                return label == null ? "?" + s : label.Foreground.ToString();
+            }).ToList();
+            T.Check(colours.Distinct().Count() == 4 && !colours.Any(x => x.StartsWith("?")), "H3: tamamlandı, iniyor, duraklatıldı ve başarısız ayrı renkte (" + string.Join(" ", colours) + ")");
+            var active = c.Queue.Items.First(i => i.Job.State == JobState.Downloading);
+            var figure = TemplatePart<TextBlock>(list, active, "Figure");
+            T.Check(figure != null && figure.IsVisible && figure.Text == active.PercentText, "asılı rakam: etkin işin yüzdesi sol sütunda (" + (figure == null ? "yok" : figure.Text) + ")");
+            var youtube = c.Queue.Items.First(i => i.Job.Platform == "YouTube");
+            var key = TemplatePart<Border>(list, youtube, "SourceKey");
+            T.Check(key != null && key.Background.ToString() == w.Resources["SourceYouTube"].ToString(), "kaynak karesi işin kaynağının rengini alıyor (YouTube)");
+            var paused = c.Queue.Items.First(i => i.Job.State == JobState.Paused);
+            var mark = TemplatePart<TextBlock>(list, paused, "Mark");
+            T.Check(mark != null && mark.Text == "", "duraklatılan iş rakam sütununda duraklatma işaretini taşıyor");
+            PageFits(c, "QueuePage", "Kuyruk");
+            w.Close();
         }
 
         static void LoadPreview(Controller c, string title) {

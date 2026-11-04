@@ -327,10 +327,10 @@
     </Style>
 
     <!-- Sections: no cards. A block opens on a 2 px ink rule and is set apart by space, not by a frame. -->
-    <Style x:Key="Card" TargetType="Border"><Setter Property="Background" Value="Transparent"/><Setter Property="BorderBrush" Value="{DynamicResource BorderStrong}"/><Setter Property="BorderThickness" Value="0,2,0,0"/><Setter Property="Padding" Value="0,16,0,0"/><Setter Property="Margin" Value="0,0,0,32"/></Style>
+    <Style x:Key="Card" TargetType="Border"><Setter Property="Background" Value="Transparent"/><Setter Property="BorderBrush" Value="{DynamicResource BorderStrong}"/><Setter Property="BorderThickness" Value="0,2,0,0"/><Setter Property="Padding" Value="0,14,0,0"/><Setter Property="Margin" Value="0,0,0,24"/></Style>
     <Style x:Key="Chip" TargetType="Border"><Setter Property="Background" Value="{DynamicResource Surface2}"/><Setter Property="BorderThickness" Value="0"/><Setter Property="Padding" Value="8,3"/><Setter Property="Margin" Value="0,0,6,6"/></Style>
     <Style x:Key="PageTitle" TargetType="TextBlock"><Setter Property="FontFamily" Value="{StaticResource Display}"/><Setter Property="FontSize" Value="30"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="TextWrapping" Value="Wrap"/></Style>
-    <Style x:Key="PageSub" TargetType="TextBlock"><Setter Property="Foreground" Value="{DynamicResource TextMuted}"/><Setter Property="Margin" Value="0,0,0,24"/><Setter Property="TextWrapping" Value="Wrap"/></Style>
+    <Style x:Key="PageSub" TargetType="TextBlock"><Setter Property="Foreground" Value="{DynamicResource TextMuted}"/><Setter Property="Margin" Value="0,0,0,20"/><Setter Property="TextWrapping" Value="Wrap"/></Style>
     <Style x:Key="Label" TargetType="TextBlock"><Setter Property="FontFamily" Value="{StaticResource Display}"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="FontSize" Value="13"/><Setter Property="Margin" Value="0,0,0,6"/><Setter Property="TextWrapping" Value="Wrap"/></Style>
     <Style x:Key="Section" TargetType="TextBlock"><Setter Property="FontFamily" Value="{StaticResource Display}"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="FontSize" Value="16"/><Setter Property="Margin" Value="0,0,0,12"/></Style>
     <Style x:Key="Hint" TargetType="TextBlock"><Setter Property="Foreground" Value="{DynamicResource TextMuted}"/><Setter Property="FontSize" Value="12.5"/><Setter Property="TextWrapping" Value="Wrap"/><Setter Property="LineHeight" Value="18"/></Style>
@@ -390,7 +390,7 @@
     <Grid Grid.Column="1">
       <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
       <!-- Header: the page title flush left (HeaderEyebrow keeps its name; App.ShowPage sets the title), status right. -->
-      <Grid Margin="32,22,32,16">
+      <Grid Margin="32,20,32,12">
         <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
         <TextBlock x:Name="HeaderEyebrow" Style="{StaticResource PageTitle}" Text="{DynamicResource s.dl.title}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="0,0,16,0"/>
         <Border x:Name="StatusChip" Grid.Column="1" Background="{DynamicResource AccentSoft}" Padding="10,4" VerticalAlignment="Center">
@@ -712,11 +712,14 @@
         </Grid>
       </ScrollViewer>
 
-      <!-- Queue page -->
+      <!-- Queue page: rows on hairlines. The numeral column carries each job's percentage or state mark;
+           the running job's cell is the screen's one reversed plate. -->
       <ScrollViewer x:Name="QueuePage" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed" Focusable="False">
-        <StackPanel MaxWidth="1000" Margin="32,4,26,28">
-          <TextBlock Style="{StaticResource PageSub}" Text="{DynamicResource s.queue.subtitle}"/>
-          <WrapPanel Margin="0,0,0,8">
+        <Grid Margin="32,0,26,28">
+          <Grid.ColumnDefinitions><ColumnDefinition Width="52"/><ColumnDefinition Width="*" MaxWidth="1000"/><ColumnDefinition Width="0.001*"/></Grid.ColumnDefinitions>
+          <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+          <TextBlock Grid.ColumnSpan="2" Style="{StaticResource PageSub}" Text="{DynamicResource s.queue.subtitle}"/>
+          <WrapPanel Grid.Row="1" Grid.ColumnSpan="2" Margin="0,0,0,8">
             <ComboBox x:Name="QueueFilterBox" MinWidth="190" Margin="0,0,8,8" AutomationProperties.Name="{DynamicResource s.queue.filter}">
               <ComboBoxItem Tag="all" Content="{DynamicResource s.filter.allPlatforms}"/>
               <ComboBoxItem Tag="YouTube" Content="YouTube"/>
@@ -728,65 +731,96 @@
             <Button x:Name="PauseAllButton" Margin="0,0,8,8"><StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Glyph}" Text="&#xE769;" Margin="0,0,8,0"/><TextBlock Text="{DynamicResource s.queue.pauseAll}"/></StackPanel></Button>
             <Button x:Name="ClearFinishedButton" Margin="0,0,8,8"><StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Glyph}" Text="&#xE894;" Margin="0,0,8,0"/><TextBlock Text="{DynamicResource s.queue.clear}"/></StackPanel></Button>
           </WrapPanel>
-          <Border x:Name="QueueEmpty" Style="{StaticResource Card}">
+          <Border x:Name="QueueEmpty" Grid.Row="2" Grid.Column="1" Style="{StaticResource Card}">
             <StackPanel>
               <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource s.queue.empty}"/>
               <Button x:Name="QueueGoDownload" Style="{StaticResource Ghost}" HorizontalAlignment="Left" Margin="-10,8,0,0" Content="{DynamicResource s.queue.add}"/>
             </StackPanel>
           </Border>
-          <ItemsControl x:Name="QueueList" Focusable="False" AutomationProperties.Name="{DynamicResource s.queue.title}">
-            <ItemsControl.ItemTemplate><DataTemplate>
-              <Border Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="12" Padding="16,14" Margin="0,0,0,10">
-                <Grid>
-                  <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                  <StackPanel>
-                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="14.5" TextTrimming="CharacterEllipsis"/>
-                    <TextBlock Text="{Binding Subtitle}" Foreground="{DynamicResource TextMuted}" FontSize="12.5" Margin="0,3,0,0" TextTrimming="CharacterEllipsis"/>
-                    <Grid Margin="0,10,0,0">
-                      <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                      <Border x:Name="StateChip" CornerRadius="10" Padding="9,2" Background="{DynamicResource Surface2}" VerticalAlignment="Center">
-                        <TextBlock x:Name="StateLabel" Text="{Binding StateText}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextMuted}"/>
-                      </Border>
-                      <TextBlock Grid.Column="1" Text="{Binding StageText}" FontSize="12.5" Foreground="{DynamicResource TextMuted}" Margin="10,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                      <TextBlock Grid.Column="2" Text="{Binding PercentText}" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource AccentText}" VerticalAlignment="Center" Margin="10,0,0,0"/>
-                    </Grid>
-                    <ProgressBar Margin="0,8,0,0" Minimum="0" Maximum="100" Value="{Binding ProgressValue, Mode=OneWay}" IsIndeterminate="{Binding Indeterminate, Mode=OneWay}" Visibility="{Binding ShowProgress, Converter={StaticResource Vis}}"/>
-                    <TextBlock Text="{Binding DetailText}" Style="{StaticResource AutoHide}" Margin="0,6,0,0"/>
-                    <TextBlock Text="{Binding NoteText}" Foreground="{DynamicResource Info}" FontSize="12.5" TextWrapping="Wrap" Margin="0,6,0,0" Visibility="{Binding HasNote, Converter={StaticResource Vis}}"/>
-                    <Border Background="{DynamicResource DangerSoft}" CornerRadius="8" Padding="10,8" Margin="0,8,0,0" Visibility="{Binding HasError, Converter={StaticResource Vis}}">
-                      <StackPanel>
-                        <TextBlock Text="{Binding ErrorText}" Foreground="{DynamicResource Danger}" FontSize="12.5" TextWrapping="Wrap"/>
-                        <WrapPanel Margin="-10,4,0,0">
-                          <Button Style="{StaticResource Ghost}" Tag="retry" Content="{DynamicResource s.job.retry}" Visibility="{Binding CanRetry, Converter={StaticResource Vis}}"/>
-                          <Button Style="{StaticResource Ghost}" Tag="resume" Content="{DynamicResource s.job.continue}" Visibility="{Binding CanResume, Converter={StaticResource Vis}}"/>
-                          <Button Style="{StaticResource Ghost}" Tag="folder" Content="{DynamicResource s.job.fixFolder}" Visibility="{Binding CanFixFolder, Converter={StaticResource Vis}}"/>
-                          <Button Style="{StaticResource Ghost}" Tag="format" Content="{DynamicResource s.job.fixFormat}" Visibility="{Binding CanFixFormat, Converter={StaticResource Vis}}"/>
-                          <Button Style="{StaticResource Ghost}" Tag="copy" Content="{DynamicResource s.job.copy}"/>
-                        </WrapPanel>
-                      </StackPanel>
+          <Border Grid.Row="3" Grid.ColumnSpan="2">
+            <Border.Style><Style TargetType="Border"><Setter Property="BorderBrush" Value="{DynamicResource BorderStrong}"/><Setter Property="BorderThickness" Value="0,2,0,0"/>
+              <Style.Triggers><DataTrigger Binding="{Binding HasItems, ElementName=QueueList}" Value="False"><Setter Property="BorderThickness" Value="0"/></DataTrigger></Style.Triggers></Style></Border.Style>
+            <ItemsControl x:Name="QueueList" Focusable="False" AutomationProperties.Name="{DynamicResource s.queue.title}">
+              <ItemsControl.ItemTemplate><DataTemplate>
+                <Border BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1">
+                  <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="52"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <!-- The numeral cell: percentage while running (reversed plate), a mark otherwise -->
+                    <Border x:Name="FigureCell" Margin="0,0,10,0">
+                      <Grid Margin="0,12,0,0" VerticalAlignment="Top" HorizontalAlignment="Left">
+                        <TextBlock x:Name="Figure" Text="{Binding PercentText}" Style="{StaticResource Numeral}" FontSize="20" LineHeight="24" Margin="4,0,4,2" Visibility="Collapsed"/>
+                        <TextBlock x:Name="Mark" Style="{StaticResource Glyph}" Text="&#xE738;" FontSize="16" Foreground="{DynamicResource TextMuted}" Margin="4,4,0,0"/>
+                      </Grid>
                     </Border>
-                  </StackPanel>
-                  <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top" Margin="12,-4,-6,0">
-                    <Button Style="{StaticResource IconButton}" Tag="pause" Content="&#xE769;" ToolTip="{DynamicResource s.job.pause}" AutomationProperties.Name="{DynamicResource s.job.pause}" Visibility="{Binding CanPause, Converter={StaticResource Vis}}"/>
-                    <Button Style="{StaticResource IconButton}" Tag="resume" Content="&#xE768;" ToolTip="{DynamicResource s.job.resume}" AutomationProperties.Name="{DynamicResource s.job.resume}" Visibility="{Binding CanResume, Converter={StaticResource Vis}}"/>
-                    <Button Style="{StaticResource IconButton}" Tag="retry" Content="&#xE72C;" ToolTip="{DynamicResource s.job.retry}" AutomationProperties.Name="{DynamicResource s.job.retry}" Visibility="{Binding CanRetry, Converter={StaticResource Vis}}"/>
-                    <Button Style="{StaticResource IconButton}" Tag="reveal" Content="&#xE838;" ToolTip="{DynamicResource s.common.reveal}" AutomationProperties.Name="{DynamicResource s.common.reveal}" Visibility="{Binding CanReveal, Converter={StaticResource Vis}}"/>
-                    <Button Style="{StaticResource IconButton}" Tag="up" Content="&#xE70E;" ToolTip="{DynamicResource s.job.up}" AutomationProperties.Name="{DynamicResource s.job.up}" Visibility="{Binding CanMove, Converter={StaticResource Vis}}"/>
-                    <Button Style="{StaticResource IconButton}" Tag="down" Content="&#xE70D;" ToolTip="{DynamicResource s.job.down}" AutomationProperties.Name="{DynamicResource s.job.down}" Visibility="{Binding CanMove, Converter={StaticResource Vis}}"/>
-                    <Button Style="{StaticResource IconButton}" Tag="cancel" Content="&#xE711;" ToolTip="{DynamicResource s.job.cancel}" AutomationProperties.Name="{DynamicResource s.job.cancel}" Visibility="{Binding CanCancel, Converter={StaticResource Vis}}"/>
-                    <Button Style="{StaticResource IconButton}" Tag="remove" Content="&#xE74D;" ToolTip="{DynamicResource s.job.remove}" AutomationProperties.Name="{DynamicResource s.job.remove}" Visibility="{Binding CanRemove, Converter={StaticResource Vis}}"/>
-                  </StackPanel>
-                </Grid>
-              </Border>
-              <DataTemplate.Triggers>
-                <DataTrigger Binding="{Binding StateKind}" Value="active"><Setter TargetName="StateChip" Property="Background" Value="{DynamicResource AccentSoft}"/><Setter TargetName="StateLabel" Property="Foreground" Value="{DynamicResource AccentText}"/></DataTrigger>
-                <DataTrigger Binding="{Binding StateKind}" Value="done"><Setter TargetName="StateChip" Property="Background" Value="{DynamicResource SuccessSoft}"/><Setter TargetName="StateLabel" Property="Foreground" Value="{DynamicResource Success}"/></DataTrigger>
-                <DataTrigger Binding="{Binding StateKind}" Value="error"><Setter TargetName="StateChip" Property="Background" Value="{DynamicResource DangerSoft}"/><Setter TargetName="StateLabel" Property="Foreground" Value="{DynamicResource Danger}"/></DataTrigger>
-                <DataTrigger Binding="{Binding StateKind}" Value="warning"><Setter TargetName="StateChip" Property="Background" Value="{DynamicResource WarningSoft}"/><Setter TargetName="StateLabel" Property="Foreground" Value="{DynamicResource Warning}"/></DataTrigger>
-              </DataTemplate.Triggers>
-            </DataTemplate></ItemsControl.ItemTemplate>
-          </ItemsControl>
-        </StackPanel>
+                    <StackPanel Grid.Column="1" Margin="0,12,0,12">
+                      <TextBlock Text="{Binding Title}" FontFamily="{StaticResource Display}" FontWeight="SemiBold" FontSize="15" TextTrimming="CharacterEllipsis"/>
+                      <WrapPanel Margin="0,4,0,0">
+                        <Border x:Name="SourceKey" Width="9" Height="9" Margin="0,0,7,0" VerticalAlignment="Center" Background="{DynamicResource SourceOther}"/>
+                        <TextBlock Text="{Binding Subtitle}" Foreground="{DynamicResource TextMuted}" FontSize="12.5" Margin="0,0,10,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                        <Border x:Name="StateChip" Padding="7,1" Background="{DynamicResource Surface2}" VerticalAlignment="Center">
+                          <TextBlock x:Name="StateLabel" Text="{Binding StateText}" FontFamily="{StaticResource Display}" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource TextMuted}"/>
+                        </Border>
+                        <TextBlock Text="{Binding StageText}" FontSize="12.5" Foreground="{DynamicResource TextMuted}" Margin="8,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                      </WrapPanel>
+                      <ProgressBar Margin="0,10,0,0" Minimum="0" Maximum="100" Value="{Binding ProgressValue, Mode=OneWay}" IsIndeterminate="{Binding Indeterminate, Mode=OneWay}" Visibility="{Binding ShowProgress, Converter={StaticResource Vis}}"/>
+                      <TextBlock Text="{Binding DetailText}" Style="{StaticResource AutoHide}" Typography.NumeralAlignment="Tabular" Margin="0,6,0,0"/>
+                      <TextBlock Text="{Binding NoteText}" Foreground="{DynamicResource Info}" FontSize="12.5" TextWrapping="Wrap" Margin="0,6,0,0" Visibility="{Binding HasNote, Converter={StaticResource Vis}}"/>
+                      <Border Background="{DynamicResource DangerSoft}" Padding="12,8" Margin="0,8,0,0" Visibility="{Binding HasError, Converter={StaticResource Vis}}">
+                        <StackPanel>
+                          <TextBlock Text="{Binding ErrorText}" Foreground="{DynamicResource Danger}" FontSize="12.5" TextWrapping="Wrap"/>
+                          <WrapPanel Margin="-10,4,0,0">
+                            <Button Style="{StaticResource Ghost}" Tag="retry" Content="{DynamicResource s.job.retry}" Visibility="{Binding CanRetry, Converter={StaticResource Vis}}"/>
+                            <Button Style="{StaticResource Ghost}" Tag="resume" Content="{DynamicResource s.job.continue}" Visibility="{Binding CanResume, Converter={StaticResource Vis}}"/>
+                            <Button Style="{StaticResource Ghost}" Tag="folder" Content="{DynamicResource s.job.fixFolder}" Visibility="{Binding CanFixFolder, Converter={StaticResource Vis}}"/>
+                            <Button Style="{StaticResource Ghost}" Tag="format" Content="{DynamicResource s.job.fixFormat}" Visibility="{Binding CanFixFormat, Converter={StaticResource Vis}}"/>
+                            <Button Style="{StaticResource Ghost}" Tag="copy" Content="{DynamicResource s.job.copy}"/>
+                          </WrapPanel>
+                        </StackPanel>
+                      </Border>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Top" Margin="12,8,-6,0">
+                      <Button Style="{StaticResource IconButton}" Tag="pause" Content="&#xE769;" ToolTip="{DynamicResource s.job.pause}" AutomationProperties.Name="{DynamicResource s.job.pause}" Visibility="{Binding CanPause, Converter={StaticResource Vis}}"/>
+                      <Button Style="{StaticResource IconButton}" Tag="resume" Content="&#xE768;" ToolTip="{DynamicResource s.job.resume}" AutomationProperties.Name="{DynamicResource s.job.resume}" Visibility="{Binding CanResume, Converter={StaticResource Vis}}"/>
+                      <Button Style="{StaticResource IconButton}" Tag="retry" Content="&#xE72C;" ToolTip="{DynamicResource s.job.retry}" AutomationProperties.Name="{DynamicResource s.job.retry}" Visibility="{Binding CanRetry, Converter={StaticResource Vis}}"/>
+                      <Button Style="{StaticResource IconButton}" Tag="reveal" Content="&#xE838;" ToolTip="{DynamicResource s.common.reveal}" AutomationProperties.Name="{DynamicResource s.common.reveal}" Visibility="{Binding CanReveal, Converter={StaticResource Vis}}"/>
+                      <Button Style="{StaticResource IconButton}" Tag="up" Content="&#xE70E;" ToolTip="{DynamicResource s.job.up}" AutomationProperties.Name="{DynamicResource s.job.up}" Visibility="{Binding CanMove, Converter={StaticResource Vis}}"/>
+                      <Button Style="{StaticResource IconButton}" Tag="down" Content="&#xE70D;" ToolTip="{DynamicResource s.job.down}" AutomationProperties.Name="{DynamicResource s.job.down}" Visibility="{Binding CanMove, Converter={StaticResource Vis}}"/>
+                      <Button Style="{StaticResource IconButton}" Tag="cancel" Content="&#xE711;" ToolTip="{DynamicResource s.job.cancel}" AutomationProperties.Name="{DynamicResource s.job.cancel}" Visibility="{Binding CanCancel, Converter={StaticResource Vis}}"/>
+                      <Button Style="{StaticResource IconButton}" Tag="remove" Content="&#xE74D;" ToolTip="{DynamicResource s.job.remove}" AutomationProperties.Name="{DynamicResource s.job.remove}" Visibility="{Binding CanRemove, Converter={StaticResource Vis}}"/>
+                    </StackPanel>
+                  </Grid>
+                </Border>
+                <DataTemplate.Triggers>
+                  <DataTrigger Binding="{Binding StateKind}" Value="active">
+                    <Setter TargetName="StateChip" Property="Background" Value="{DynamicResource AccentSoft}"/><Setter TargetName="StateLabel" Property="Foreground" Value="{DynamicResource AccentText}"/>
+                    <Setter TargetName="Mark" Property="Visibility" Value="Collapsed"/>
+                  </DataTrigger>
+                  <DataTrigger Binding="{Binding StateKind}" Value="done"><Setter TargetName="StateChip" Property="Background" Value="{DynamicResource SuccessSoft}"/><Setter TargetName="StateLabel" Property="Foreground" Value="{DynamicResource Success}"/><Setter TargetName="Mark" Property="Text" Value="&#xE73E;"/><Setter TargetName="Mark" Property="Foreground" Value="{DynamicResource Success}"/></DataTrigger>
+                  <DataTrigger Binding="{Binding StateKind}" Value="error"><Setter TargetName="StateChip" Property="Background" Value="{DynamicResource DangerSoft}"/><Setter TargetName="StateLabel" Property="Foreground" Value="{DynamicResource Danger}"/><Setter TargetName="Mark" Property="Text" Value="&#xE7BA;"/><Setter TargetName="Mark" Property="Foreground" Value="{DynamicResource Danger}"/></DataTrigger>
+                  <DataTrigger Binding="{Binding StateKind}" Value="warning"><Setter TargetName="StateChip" Property="Background" Value="{DynamicResource WarningSoft}"/><Setter TargetName="StateLabel" Property="Foreground" Value="{DynamicResource Warning}"/><Setter TargetName="Mark" Property="Text" Value="&#xE72C;"/><Setter TargetName="Mark" Property="Foreground" Value="{DynamicResource Warning}"/></DataTrigger>
+                  <DataTrigger Binding="{Binding StateKey}" Value="paused"><Setter TargetName="Mark" Property="Text" Value="&#xE769;"/></DataTrigger>
+                  <DataTrigger Binding="{Binding StateKey}" Value="scheduled"><Setter TargetName="Mark" Property="Text" Value="&#xE823;"/></DataTrigger>
+                  <DataTrigger Binding="{Binding PlatformKey}" Value="YouTube"><Setter TargetName="SourceKey" Property="Background" Value="{DynamicResource SourceYouTube}"/></DataTrigger>
+                  <DataTrigger Binding="{Binding PlatformKey}" Value="Instagram"><Setter TargetName="SourceKey" Property="Background" Value="{DynamicResource SourceInstagram}"/></DataTrigger>
+                  <DataTrigger Binding="{Binding PlatformKey}" Value="TikTok"><Setter TargetName="SourceKey" Property="Background" Value="{DynamicResource SourceTikTok}"/></DataTrigger>
+                  <!-- Running with a known percentage: the figure replaces the mark and the cell turns into the reversed plate. -->
+                  <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions><Condition Binding="{Binding StateKind}" Value="active"/><Condition Binding="{Binding Indeterminate}" Value="False"/></MultiDataTrigger.Conditions>
+                    <Setter TargetName="Figure" Property="Visibility" Value="Visible"/>
+                    <Setter TargetName="Figure" Property="Foreground" Value="{DynamicResource OnAccent}"/>
+                    <Setter TargetName="FigureCell" Property="Background" Value="{DynamicResource Accent}"/>
+                  </MultiDataTrigger>
+                  <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions><Condition Binding="{Binding StateKind}" Value="active"/><Condition Binding="{Binding Indeterminate}" Value="True"/></MultiDataTrigger.Conditions>
+                    <Setter TargetName="Mark" Property="Visibility" Value="Visible"/>
+                    <Setter TargetName="Mark" Property="Text" Value="&#xE896;"/>
+                    <Setter TargetName="Mark" Property="Foreground" Value="{DynamicResource AccentText}"/>
+                  </MultiDataTrigger>
+                </DataTemplate.Triggers>
+              </DataTemplate></ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </Border>
+        </Grid>
       </ScrollViewer>
 
       <!-- History page -->

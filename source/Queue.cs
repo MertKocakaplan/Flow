@@ -93,6 +93,9 @@ namespace Flow {
                 return string.Join("  ·  ", parts);
             }
         }
+        // Display only: XAML bindings cannot reach the Job field, so row templates read these.
+        public string StateKey { get { return Job.State; } }
+        public string PlatformKey { get { return Job.Platform; } }
         public string StateKind {
             get {
                 var s = Job.State;
