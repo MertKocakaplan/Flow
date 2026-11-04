@@ -88,7 +88,7 @@
         <Grid Background="Transparent">
           <Border x:Name="Rule" Height="2" VerticalAlignment="Bottom" Background="{DynamicResource BorderStrong}" Visibility="Hidden"/>
           <Border x:Name="Ring" Margin="0,2" BorderBrush="{DynamicResource Focus}" BorderThickness="2" Visibility="Collapsed"/>
-          <ContentPresenter Margin="2,0,2,2" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+          <ContentPresenter Margin="8,0,8,2" HorizontalAlignment="Center" VerticalAlignment="Center"/>
         </Grid>
         <ControlTemplate.Triggers>
           <Trigger Property="IsMouseOver" Value="True"><Setter Property="Foreground" Value="{DynamicResource Text}"/></Trigger>
@@ -388,7 +388,7 @@
 
     <!-- Content -->
     <Grid Grid.Column="1">
-      <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+      <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
       <!-- Header: the page title flush left (HeaderEyebrow keeps its name; App.ShowPage sets the title), status right. -->
       <Grid Margin="32,22,32,16">
         <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
@@ -398,23 +398,27 @@
         </Border>
       </Grid>
 
-      <!-- Download page -->
+      <!-- Download page: three numbered steps hang on the numeral column; İndir lives in the action bar below. -->
       <ScrollViewer x:Name="DownloadPage" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
-        <StackPanel MaxWidth="1000" Margin="32,4,26,28">
-          <TextBlock Style="{StaticResource PageSub}" Text="{DynamicResource s.dl.subtitle}"/>
+        <Grid Margin="32,0,26,28">
+          <!-- Measure: the form column stops at 1000 px and stays flush left; the last column takes the rest. -->
+          <Grid.ColumnDefinitions><ColumnDefinition Width="52"/><ColumnDefinition Width="*" MaxWidth="1000"/><ColumnDefinition Width="0.001*"/></Grid.ColumnDefinitions>
+          <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+          <TextBlock Grid.ColumnSpan="2" Style="{StaticResource PageSub}" Text="{DynamicResource s.dl.subtitle}"/>
 
-          <Border Background="{DynamicResource Surface2}" BorderBrush="{DynamicResource Border}" BorderThickness="1" CornerRadius="10" Padding="4" Margin="0,0,0,14">
-            <UniformGrid x:Name="PlatformTabs" Rows="1" KeyboardNavigation.DirectionalNavigation="Cycle">
-              <RadioButton x:Name="TabYouTube" Style="{StaticResource Segment}" Tag="YouTube" Content="YouTube" IsChecked="True"/>
-              <RadioButton x:Name="TabInstagram" Style="{StaticResource Segment}" Tag="Instagram" Content="Instagram"/>
-              <RadioButton x:Name="TabTikTok" Style="{StaticResource Segment}" Tag="TikTok" Content="TikTok"/>
-              <RadioButton x:Name="TabOther" Style="{StaticResource Segment}" Tag="Other" Content="{DynamicResource s.tab.other}"/>
-            </UniformGrid>
-          </Border>
-
-          <Border Style="{StaticResource Card}">
+          <!-- 1 · the link and what it really contains -->
+          <TextBlock Grid.Row="1" Style="{StaticResource Numeral}" Text="1" Margin="0,8,0,0"/>
+          <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource Card}">
             <StackPanel>
-              <TextBlock Style="{StaticResource Label}" Text="{DynamicResource s.dl.link}"/>
+              <TextBlock Style="{StaticResource Section}" Text="{DynamicResource s.dl.link}"/>
+              <Border BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1" Margin="0,0,0,16">
+                <UniformGrid x:Name="PlatformTabs" Rows="1" MaxWidth="640" HorizontalAlignment="Left" KeyboardNavigation.DirectionalNavigation="Cycle">
+                  <RadioButton x:Name="TabYouTube" Style="{StaticResource Segment}" Tag="YouTube" Content="YouTube" IsChecked="True" Margin="0,0,0,-1"/>
+                  <RadioButton x:Name="TabInstagram" Style="{StaticResource Segment}" Tag="Instagram" Content="Instagram" Margin="0,0,0,-1"/>
+                  <RadioButton x:Name="TabTikTok" Style="{StaticResource Segment}" Tag="TikTok" Content="TikTok" Margin="0,0,0,-1"/>
+                  <RadioButton x:Name="TabOther" Style="{StaticResource Segment}" Tag="Other" Content="{DynamicResource s.tab.other}" Margin="0,0,0,-1"/>
+                </UniformGrid>
+              </Border>
               <Grid>
                 <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                 <TextBox x:Name="UrlBox" Tag="{DynamicResource s.dl.placeholder}" AutomationProperties.Name="{DynamicResource s.dl.link}" ToolTip="{DynamicResource s.dl.link.tip}"/>
@@ -432,7 +436,7 @@
                       <Grid Margin="0,0,0,8">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="130"/><ColumnDefinition Width="Auto"/><ColumnDefinition/></Grid.ColumnDefinitions>
                         <TextBlock Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                        <Border x:Name="Chip" Grid.Column="1" CornerRadius="10" Padding="8,1" Background="{DynamicResource Surface2}" VerticalAlignment="Center">
+                        <Border x:Name="Chip" Grid.Column="1" Padding="8,1" Background="{DynamicResource Surface2}" VerticalAlignment="Center">
                           <TextBlock x:Name="ChipText" Text="{Binding StatusText}" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource TextMuted}"/>
                         </Border>
                         <TextBlock Grid.Column="2" Text="{Binding NoteText}" Style="{StaticResource Hint}" Margin="10,0,0,0" VerticalAlignment="Center"/>
@@ -450,22 +454,22 @@
                   <ListBox x:Name="SiteList" MaxHeight="220" VirtualizingStackPanel.IsVirtualizing="True" ScrollViewer.CanContentScroll="True" AutomationProperties.Name="{DynamicResource s.sites.engine}"/>
                 </StackPanel>
               </Expander>
-              <Border x:Name="RedirectNote" Background="{DynamicResource InfoSoft}" CornerRadius="8" Padding="12,8" Margin="0,10,0,0" Visibility="Collapsed">
+              <Border x:Name="RedirectNote" Background="{DynamicResource InfoSoft}" Padding="12,8" Margin="0,10,0,0" Visibility="Collapsed">
                 <TextBlock x:Name="RedirectText" Foreground="{DynamicResource Info}" FontSize="12.5" TextWrapping="Wrap"/>
               </Border>
 
-              <Border x:Name="PreviewCard" CornerRadius="10" Background="{DynamicResource Surface2}" Padding="14" Margin="0,16,0,0">
+              <Border x:Name="PreviewCard" Background="Transparent" Margin="0,18,0,0">
                 <Grid>
                   <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition/></Grid.ColumnDefinitions>
-                  <Border x:Name="ThumbBox" Background="{DynamicResource AccentSoft}" CornerRadius="8" Width="160" Height="90" VerticalAlignment="Top" ClipToBounds="True">
+                  <Border x:Name="ThumbBox" Background="{DynamicResource AccentSoft}" Width="160" Height="90" VerticalAlignment="Top" ClipToBounds="True">
                     <Grid>
                       <TextBlock Style="{StaticResource Glyph}" Text="&#xE714;" FontSize="26" Foreground="{DynamicResource AccentText}" HorizontalAlignment="Center"/>
                       <Image x:Name="Thumbnail" Stretch="UniformToFill" Visibility="Collapsed"/>
                     </Grid>
                   </Border>
-                  <StackPanel Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Center">
-                    <TextBlock x:Name="VideoTitle" Text="{DynamicResource s.preview.empty.title}" FontWeight="SemiBold" FontSize="15" TextWrapping="Wrap" MaxHeight="44" TextTrimming="CharacterEllipsis"/>
-                    <TextBlock x:Name="VideoMeta" Text="{DynamicResource s.preview.empty.meta}" Style="{StaticResource Hint}" Margin="0,5,0,0"/>
+                  <StackPanel Grid.Column="1" Margin="18,0,0,0" VerticalAlignment="Top">
+                    <TextBlock x:Name="VideoTitle" Text="{DynamicResource s.preview.empty.title}" FontFamily="{StaticResource Display}" FontWeight="SemiBold" FontSize="17" TextWrapping="Wrap" MaxHeight="46" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock x:Name="VideoMeta" Text="{DynamicResource s.preview.empty.meta}" Style="{StaticResource Hint}" Margin="0,4,0,0"/>
                     <WrapPanel x:Name="Chips" Margin="0,10,0,0"/>
                     <ProgressBar x:Name="PreviewProgress" IsIndeterminate="True" Height="4" Margin="0,8,0,0" Visibility="Collapsed"/>
                     <Button x:Name="OpenListButton" Style="{StaticResource Ghost}" HorizontalAlignment="Left" Margin="-10,4,0,0" Visibility="Collapsed">
@@ -478,7 +482,8 @@
             </StackPanel>
           </Border>
 
-          <Border x:Name="CollectionCard" Style="{StaticResource Card}" Visibility="Collapsed">
+          <!-- A list or multi-item post: its items, between the link and the choice -->
+          <Border x:Name="CollectionCard" Grid.Row="2" Grid.Column="1" Style="{StaticResource Card}" Visibility="Collapsed">
             <StackPanel>
               <Grid>
                 <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
@@ -504,7 +509,7 @@
                       <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis"/>
                       <TextBlock Text="{Binding Status}" Style="{StaticResource AutoHide}" FontSize="12"/>
                     </StackPanel>
-                    <TextBlock Grid.Column="2" Text="{Binding DurationText}" Foreground="{DynamicResource TextMuted}" FontSize="12.5" VerticalAlignment="Center" Margin="12,0,4,0"/>
+                    <TextBlock Grid.Column="2" Text="{Binding DurationText}" Style="{StaticResource Figures}" Foreground="{DynamicResource TextMuted}" FontSize="13" VerticalAlignment="Center" Margin="12,0,4,0"/>
                   </Grid>
                 </DataTemplate></ListBox.ItemTemplate>
               </ListBox>
@@ -512,11 +517,13 @@
             </StackPanel>
           </Border>
 
-          <Border x:Name="OptionsCard" Style="{StaticResource Card}">
+          <!-- 2 · the file that will be made -->
+          <TextBlock Grid.Row="3" Style="{StaticResource Numeral}" Text="2" Margin="0,8,0,0"/>
+          <Border x:Name="OptionsCard" Grid.Row="3" Grid.Column="1" Style="{StaticResource Card}">
             <StackPanel>
               <TextBlock Style="{StaticResource Section}" Text="{DynamicResource s.opt.title}"/>
               <Grid>
-                <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="14"/><ColumnDefinition/><ColumnDefinition Width="14"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="16"/><ColumnDefinition/><ColumnDefinition Width="16"/><ColumnDefinition/></Grid.ColumnDefinitions>
                 <StackPanel>
                   <TextBlock Style="{StaticResource Label}" Text="{DynamicResource s.opt.profile}"/>
                   <ComboBox x:Name="ProfileBox" AutomationProperties.Name="{DynamicResource s.opt.profile}">
@@ -542,33 +549,63 @@
                   <ComboBox x:Name="QualityBox" AutomationProperties.Name="{DynamicResource s.opt.quality}"/>
                 </StackPanel>
               </Grid>
-              <WrapPanel Margin="0,12,0,0">
-                <StackPanel Orientation="Horizontal" Margin="0,0,18,6">
-                  <TextBlock Text="{DynamicResource s.opt.codec}" VerticalAlignment="Center" Margin="0,0,8,0" FontSize="13"/>
-                  <ComboBox x:Name="CodecBox" MinWidth="150" AutomationProperties.Name="{DynamicResource s.opt.codec}">
-                    <ComboBoxItem Tag="auto" Content="{DynamicResource s.codec.auto}"/>
-                    <ComboBoxItem Tag="h264" Content="{DynamicResource s.codec.h264}"/>
-                  </ComboBox>
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,0,18,6">
-                  <TextBlock Text="{DynamicResource s.opt.fps}" VerticalAlignment="Center" Margin="0,0,8,0" FontSize="13"/>
-                  <ComboBox x:Name="FpsBox" MinWidth="130" AutomationProperties.Name="{DynamicResource s.opt.fps}">
-                    <ComboBoxItem Tag="0" Content="{DynamicResource s.fps.source}"/>
-                    <ComboBoxItem Tag="60" Content="{DynamicResource s.fps.60}"/>
-                    <ComboBoxItem Tag="30" Content="{DynamicResource s.fps.30}"/>
-                  </ComboBox>
-                </StackPanel>
-                <CheckBox x:Name="StrictBox" Content="{DynamicResource s.opt.strict}" ToolTip="{DynamicResource s.opt.strict.tip}" VerticalAlignment="Center" Margin="0,0,0,6"/>
-              </WrapPanel>
-              <Border x:Name="SelectionPanel" Background="{DynamicResource Surface2}" CornerRadius="8" Padding="12,10" Margin="0,10,0,0">
+              <Border x:Name="SelectionPanel" Background="{DynamicResource Surface2}" Padding="12,10" Margin="0,12,0,0">
                 <StackPanel>
-                  <TextBlock x:Name="SelectionSummary" FontSize="13" TextWrapping="Wrap"/>
+                  <TextBlock x:Name="SelectionSummary" Style="{StaticResource Figures}" FontSize="13.5" TextWrapping="Wrap"/>
                   <TextBlock x:Name="SelectionWarning" Foreground="{DynamicResource Warning}" FontSize="12.5" TextWrapping="Wrap" Margin="0,4,0,0" Visibility="Collapsed"/>
                 </StackPanel>
               </Border>
+            </StackPanel>
+          </Border>
 
-              <Expander x:Name="SubtitleExpander" Margin="-6,10,0,0" AutomationProperties.Name="{DynamicResource s.subs.title}">
-                <Expander.Header><TextBlock x:Name="SubtitleHeader" Text="{DynamicResource s.subs.title}" FontWeight="SemiBold" FontSize="13.5"/></Expander.Header>
+          <!-- 3 · where it goes -->
+          <TextBlock Grid.Row="4" Style="{StaticResource Numeral}" Text="3" Margin="0,8,0,0"/>
+          <Border Grid.Row="4" Grid.Column="1" Style="{StaticResource Card}">
+            <StackPanel>
+              <TextBlock Style="{StaticResource Section}" Text="{DynamicResource s.opt.folder}"/>
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <TextBox x:Name="FolderBox" IsReadOnly="True" AutomationProperties.Name="{DynamicResource s.opt.folder}"/>
+                <Button x:Name="FolderButton" Grid.Column="1" Margin="8,0,0,0" Content="{DynamicResource s.common.change}"/>
+              </Grid>
+              <WrapPanel Margin="0,10,0,0">
+                <StackPanel Orientation="Horizontal" Margin="0,0,18,6">
+                  <TextBlock Text="{DynamicResource s.opt.duplicate}" VerticalAlignment="Center" Margin="0,0,8,0" FontSize="13"/>
+                  <ComboBox x:Name="DuplicateBox" MinWidth="170" AutomationProperties.Name="{DynamicResource s.opt.duplicate}" ToolTip="{DynamicResource s.opt.duplicate.tip}">
+                    <ComboBoxItem Tag="rename" Content="{DynamicResource s.dup.rename}"/>
+                    <ComboBoxItem Tag="skip" Content="{DynamicResource s.dup.skip}"/>
+                  </ComboBox>
+                </StackPanel>
+              </WrapPanel>
+              <TextBlock x:Name="NamePreview" Style="{StaticResource AutoHide}" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
+            </StackPanel>
+          </Border>
+
+          <!-- Openers: every advanced setting one click away, none in the main path -->
+          <Border Grid.Row="5" Grid.Column="1" BorderBrush="{DynamicResource Border}" BorderThickness="0,1,0,0" Padding="0,6,0,0">
+            <StackPanel>
+              <Expander x:Name="FormatExpander" Margin="-6,0,0,0" Header="{DynamicResource s.opt.details}" AutomationProperties.Name="{DynamicResource s.opt.details}">
+                <WrapPanel>
+                  <StackPanel Orientation="Horizontal" Margin="0,0,18,8">
+                    <TextBlock Text="{DynamicResource s.opt.codec}" VerticalAlignment="Center" Margin="0,0,8,0" FontSize="13"/>
+                    <ComboBox x:Name="CodecBox" MinWidth="150" AutomationProperties.Name="{DynamicResource s.opt.codec}">
+                      <ComboBoxItem Tag="auto" Content="{DynamicResource s.codec.auto}"/>
+                      <ComboBoxItem Tag="h264" Content="{DynamicResource s.codec.h264}"/>
+                    </ComboBox>
+                  </StackPanel>
+                  <StackPanel Orientation="Horizontal" Margin="0,0,18,8">
+                    <TextBlock Text="{DynamicResource s.opt.fps}" VerticalAlignment="Center" Margin="0,0,8,0" FontSize="13"/>
+                    <ComboBox x:Name="FpsBox" MinWidth="130" AutomationProperties.Name="{DynamicResource s.opt.fps}">
+                      <ComboBoxItem Tag="0" Content="{DynamicResource s.fps.source}"/>
+                      <ComboBoxItem Tag="60" Content="{DynamicResource s.fps.60}"/>
+                      <ComboBoxItem Tag="30" Content="{DynamicResource s.fps.30}"/>
+                    </ComboBox>
+                  </StackPanel>
+                  <CheckBox x:Name="StrictBox" Content="{DynamicResource s.opt.strict}" ToolTip="{DynamicResource s.opt.strict.tip}" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                </WrapPanel>
+              </Expander>
+              <Expander x:Name="SubtitleExpander" Margin="-6,0,0,0" AutomationProperties.Name="{DynamicResource s.subs.title}">
+                <Expander.Header><TextBlock x:Name="SubtitleHeader" Text="{DynamicResource s.subs.title}" FontFamily="{StaticResource Display}" FontWeight="SemiBold" FontSize="14"/></Expander.Header>
                 <StackPanel>
                   <TextBlock x:Name="SubtitleNote" Style="{StaticResource AutoHide}" Margin="0,0,0,8"/>
                   <WrapPanel x:Name="SubtitleList"/>
@@ -584,8 +621,8 @@
                   </StackPanel>
                 </StackPanel>
               </Expander>
-              <Expander x:Name="ClipExpander" Margin="-6,2,0,0" AutomationProperties.Name="{DynamicResource s.clip.title}">
-                <Expander.Header><TextBlock x:Name="ClipHeader" Text="{DynamicResource s.clip.title}" FontWeight="SemiBold" FontSize="13.5"/></Expander.Header>
+              <Expander x:Name="ClipExpander" Margin="-6,0,0,0" AutomationProperties.Name="{DynamicResource s.clip.title}">
+                <Expander.Header><TextBlock x:Name="ClipHeader" Text="{DynamicResource s.clip.title}" FontFamily="{StaticResource Display}" FontWeight="SemiBold" FontSize="14"/></Expander.Header>
                 <StackPanel>
                   <Grid>
                     <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="12"/><ColumnDefinition/><ColumnDefinition Width="12"/><ColumnDefinition Width="1.4*"/></Grid.ColumnDefinitions>
@@ -613,9 +650,8 @@
                   <TextBlock x:Name="ClipNote" Style="{StaticResource Hint}" Margin="0,8,0,0"/>
                 </StackPanel>
               </Expander>
-
-              <Expander x:Name="ScheduleExpander" Margin="-6,2,0,0" AutomationProperties.Name="{DynamicResource s.sched.title}">
-                <Expander.Header><TextBlock x:Name="ScheduleHeader" Text="{DynamicResource s.sched.title}" FontWeight="SemiBold" FontSize="13.5"/></Expander.Header>
+              <Expander x:Name="ScheduleExpander" Margin="-6,0,0,0" AutomationProperties.Name="{DynamicResource s.sched.title}">
+                <Expander.Header><TextBlock x:Name="ScheduleHeader" Text="{DynamicResource s.sched.title}" FontFamily="{StaticResource Display}" FontWeight="SemiBold" FontSize="14"/></Expander.Header>
                 <StackPanel>
                   <Grid>
                     <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="12"/><ColumnDefinition/><ColumnDefinition Width="12"/><ColumnDefinition Width="1.3*"/></Grid.ColumnDefinitions>
@@ -642,24 +678,7 @@
                   <TextBlock x:Name="ScheduleNote" Style="{StaticResource Hint}" Text="{DynamicResource s.sched.note}" Margin="0,8,0,0"/>
                 </StackPanel>
               </Expander>
-
-              <TextBlock Style="{StaticResource Label}" Text="{DynamicResource s.opt.folder}" Margin="0,16,0,7"/>
-              <Grid>
-                <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                <TextBox x:Name="FolderBox" IsReadOnly="True" AutomationProperties.Name="{DynamicResource s.opt.folder}"/>
-                <Button x:Name="FolderButton" Grid.Column="1" Margin="8,0,0,0" Content="{DynamicResource s.common.change}"/>
-              </Grid>
-              <WrapPanel Margin="0,10,0,0">
-                <StackPanel Orientation="Horizontal" Margin="0,0,18,6">
-                  <TextBlock Text="{DynamicResource s.opt.duplicate}" VerticalAlignment="Center" Margin="0,0,8,0" FontSize="13"/>
-                  <ComboBox x:Name="DuplicateBox" MinWidth="170" AutomationProperties.Name="{DynamicResource s.opt.duplicate}" ToolTip="{DynamicResource s.opt.duplicate.tip}">
-                    <ComboBoxItem Tag="rename" Content="{DynamicResource s.dup.rename}"/>
-                    <ComboBoxItem Tag="skip" Content="{DynamicResource s.dup.skip}"/>
-                  </ComboBox>
-                </StackPanel>
-              </WrapPanel>
-              <TextBlock x:Name="NamePreview" Style="{StaticResource AutoHide}" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
-              <Expander x:Name="FileExpander" Margin="-6,8,0,0" Header="{DynamicResource s.opt.files}" AutomationProperties.Name="{DynamicResource s.opt.files}">
+              <Expander x:Name="FileExpander" Margin="-6,0,0,0" Header="{DynamicResource s.opt.files}" AutomationProperties.Name="{DynamicResource s.opt.files}">
                 <StackPanel>
                   <Grid>
                     <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="14"/><ColumnDefinition/></Grid.ColumnDefinitions>
@@ -688,20 +707,9 @@
                   <CheckBox x:Name="CollectionFolderBox" Content="{DynamicResource s.opt.collectionFolder}" Margin="0,10,0,0"/>
                 </StackPanel>
               </Expander>
-
-              <Grid Margin="0,20,0,0">
-                <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                <Button x:Name="StartButton" Style="{StaticResource Primary}" MinHeight="46" FontSize="15" ToolTip="{DynamicResource s.dl.start.tip}">
-                  <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Glyph}" Text="&#xE896;" Margin="0,0,10,0"/><TextBlock x:Name="StartText" Text="{DynamicResource s.dl.start}"/></StackPanel>
-                </Button>
-                <Button x:Name="AddHoldButton" Grid.Column="1" Margin="10,0,0,0" MinHeight="46" ToolTip="{DynamicResource s.dl.hold.tip}">
-                  <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Glyph}" Text="&#xE710;" Margin="0,0,8,0"/><TextBlock Text="{DynamicResource s.dl.hold}"/></StackPanel>
-                </Button>
-              </Grid>
             </StackPanel>
           </Border>
-
-        </StackPanel>
+        </Grid>
       </ScrollViewer>
 
       <!-- Queue page -->
@@ -1006,6 +1014,22 @@
         </StackPanel>
       </ScrollViewer>
       <!-- Notice shown above every page -->
+      <!-- İndir's action bar: the screen's one reversed plate stays in view while the form scrolls. -->
+      <Border x:Name="DownloadActions" Grid.Row="2" Visibility="{Binding Visibility, ElementName=DownloadPage}" Background="{DynamicResource Bg}" BorderBrush="{DynamicResource BorderStrong}" BorderThickness="0,1,0,0" Padding="32,12,37,14">
+        <Grid>
+          <Grid.ColumnDefinitions><ColumnDefinition Width="52"/><ColumnDefinition Width="*" MaxWidth="1000"/><ColumnDefinition Width="0.001*"/></Grid.ColumnDefinitions>
+          <Grid Grid.Column="1">
+            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <Button x:Name="StartButton" Style="{StaticResource Primary}" MinHeight="46" FontSize="16" ToolTip="{DynamicResource s.dl.start.tip}">
+              <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Glyph}" Text="&#xE896;" Margin="0,0,10,0"/><TextBlock x:Name="StartText" Text="{DynamicResource s.dl.start}"/></StackPanel>
+            </Button>
+            <Button x:Name="AddHoldButton" Grid.Column="1" Margin="10,0,0,0" MinHeight="46" ToolTip="{DynamicResource s.dl.hold.tip}">
+              <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource Glyph}" Text="&#xE710;" Margin="0,0,8,0"/><TextBlock Text="{DynamicResource s.dl.hold}"/></StackPanel>
+            </Button>
+          </Grid>
+        </Grid>
+      </Border>
+
       <Border x:Name="MessageBar" Grid.Row="1" VerticalAlignment="Bottom" HorizontalAlignment="Center" MaxWidth="780" MinWidth="320" Margin="32,0,32,22" CornerRadius="10" Padding="16,8,8,8" Visibility="Collapsed" Background="{DynamicResource InfoSoft}" BorderBrush="{DynamicResource BorderStrong}" BorderThickness="1">
         <Border.Effect><DropShadowEffect BlurRadius="18" ShadowDepth="4" Opacity="0.22"/></Border.Effect>
         <Grid>

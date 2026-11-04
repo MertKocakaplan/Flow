@@ -386,6 +386,7 @@ namespace Flow {
             new[] { "site.note.x", "Denenen gönderide video bulunamadı; oturum gerekebilir.", "No video was found in the post tried; signing in may be required." },
 
             // File name and folders
+            new[] { "opt.details", "Biçim ayrıntıları", "Format details" },
             new[] { "opt.files", "Dosya adı ve klasör düzeni", "File name and folder layout" },
             new[] { "opt.organize", "Alt klasörler", "Subfolders" },
             new[] { "org.none", "Kullanma", "None" },

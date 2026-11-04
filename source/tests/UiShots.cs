@@ -66,6 +66,56 @@ namespace FlowTests {
 
         static void RedesignChecks() {
             ShellChecks();
+            DownloadChecks();
+        }
+
+        static void LoadPreview(Controller c, string title) {
+            c.InfoSource = (u, token) => {
+                var info = MediaParser.Parse(T.Fixture("youtube.json"), Platform.YouTube);
+                if (title != null) info.Title = title;
+                return Task.FromResult(info);
+            };
+            var w = c.Window;
+            Find<TextBox>(w, "UrlBox").Text = "https://www.youtube.com/watch?v=jNQXAC9IVRw";
+            Wait(() => Find<TextBlock>(w, "VideoTitle").Text != Loc.T("preview.empty.title") && !Find<TextBlock>(w, "VideoTitle").Text.StartsWith(Loc.T("preview.loading")) && Find<WrapPanel>(w, "Chips").Children.Count > 0, 4000);
+            Find<ScrollViewer>(w, "DownloadPage").ScrollToTop(); Pump();
+        }
+
+        static void DownloadChecks() {
+            var c = OpenWith("ui-redesign-download", "light", 1180, 840);
+            var w = c.Window;
+            LoadPreview(c, null);
+            foreach (var n in new[] { "UrlBox", "ProfileBox", "FormatBox", "QualityBox", "FolderBox", "StartButton", "AddHoldButton" })
+                T.Check(InView(w, n), "H1: " + n + " 1180×840'ta kaydırmadan görünür");
+            var details = Find<Expander>(w, "FormatExpander");
+            bool hiddenFirst = !Find<ComboBox>(w, "CodecBox").IsVisible;
+            var header = details.Template.FindName("HeaderButton", details) as System.Windows.Controls.Primitives.ToggleButton;
+            header.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+            if (header.IsChecked != true) header.IsChecked = true;
+            Pump();
+            T.Check(hiddenFirst && Find<ComboBox>(w, "CodecBox").IsVisible && Find<ComboBox>(w, "FpsBox").IsVisible && Find<CheckBox>(w, "StrictBox").IsVisible, "H2: biçim ayrıntıları (kodek, kare hızı, aşma) bir tıkla açılır");
+            details.IsExpanded = false; Pump();
+            Resize(w, 760, 560);
+            T.Check(InView(w, "StartButton") && InView(w, "AddHoldButton"), "H1: İndir ve Sonraya ekle 760×560'ta kaydırmadan görünür");
+            foreach (var language in new[] { "tr", "en" }) {
+                Loc.Set(language); Pump();
+                var clipped = ClippedButtons(w);
+                T.Check(clipped.Count == 0, "İndir sayfası düğmeleri kırpılmıyor (" + language + ", 760)" + (clipped.Count == 0 ? "" : ": " + string.Join(", ", clipped)));
+            }
+            Loc.Set("tr"); Pump();
+            w.Close();
+
+            // A very long title and a deep save folder at the smallest window.
+            var paths = NewPaths("ui-redesign-long");
+            var deep = Path.Combine(paths.DefaultDownloads, "Arşiv klasörü çok uzun bir adla", "Yıllara göre ayrılmış kayıtlar 2019-2026", "Belgeseller ve uzun söyleşiler", "Seçilmiş bölümler");
+            Directory.CreateDirectory(deep);
+            var s = SettingsRules.Defaults(paths); s.Language = "tr"; s.Theme = "light"; s.Notify = false; s.Folder = deep;
+            Store.SaveSettings(paths, s);
+            var lc = Open(paths, 760, 560, new FakeExecutor());
+            LoadPreview(lc, "Kapadokya üzerinde gün doğumu: balonlar, vadiler ve peri bacaları arasında sabah yürüyüşü — dört saatlik kesintisiz kayıt, yönetmenin anlatımıyla birlikte (4K HDR, 2026 yeniden düzenlenmiş baskı)");
+            var page = Find<ScrollViewer>(lc.Window, "DownloadPage");
+            T.Check(page.ComputedHorizontalScrollBarVisibility != Visibility.Visible && ((FrameworkElement)page.Content).ActualWidth <= page.ViewportWidth + 1 && InView(lc.Window, "StartButton"), "uzun başlık ve derin kayıt yolu 760×560'ta taşmıyor");
+            lc.Window.Close();
         }
 
         static Controller OpenWith(string name, string theme, double width, double height) {
