@@ -20,11 +20,15 @@ namespace FlowTests {
             Pump();
             // The window's template root: client area including the content's own margins (dialogs have them).
             var content = VisualTreeHelper.GetChildrenCount(window) > 0 ? (FrameworkElement)VisualTreeHelper.GetChild(window, 0) : (FrameworkElement)window.Content;
+            return RenderElement(content, window.Background ?? Brushes.White, name, scale);
+        }
+
+        public static string RenderElement(FrameworkElement content, Brush background, string name, double scale) {
             double width = content.ActualWidth, height = content.ActualHeight;
             var bitmap = new RenderTargetBitmap((int)Math.Round(width * scale), (int)Math.Round(height * scale), 96 * scale, 96 * scale, PixelFormats.Pbgra32);
             var visual = new DrawingVisual();
             using (var dc = visual.RenderOpen()) {
-                dc.DrawRectangle(window.Background ?? Brushes.White, null, new Rect(0, 0, width, height));
+                dc.DrawRectangle(background, null, new Rect(0, 0, width, height));
                 dc.DrawRectangle(new VisualBrush(content), null, new Rect(0, 0, width, height));
             }
             bitmap.Render(visual);
@@ -73,6 +77,7 @@ namespace FlowTests {
             ShellChecks();
             OpenerChecks();
             TypeChecks();
+            RailFieldChecks();
             DownloadChecks();
             QueueChecks();
             HistoryChecks();
@@ -273,6 +278,44 @@ namespace FlowTests {
 
         static void Resize(Window window, double width, double height) { window.Width = width; window.Height = height; Pump(); window.UpdateLayout(); Pump(); }
 
+        // The rail's ASCII field: behind the navigation, never taking input, quiet where the labels are,
+        // alive only under the pointer and for a moment after a click, still with Windows animations off.
+        static void RailFieldChecks() {
+            foreach (var size in ShotSizes) {
+                var c = OpenWith("ui-redesign-rail-" + size[0], "light", size[0], size[1]);
+                var w = c.Window;
+                var field = c.RailField;
+                var rail = Find<Border>(w, "Sidebar");
+                T.Check(field != null && !field.IsHitTestVisible && Math.Abs(field.ActualHeight - rail.ActualHeight) < 1 && Math.Abs(field.ActualWidth - rail.ActualWidth) < 1, "ray efekti rayın arkasını kaplıyor ve girdi almıyor (" + size[0] + ")");
+                var quiet = new[] { "NavDownload", "NavQueue", "NavHistory", "NavSettings" }.All(n => {
+                    var nav = Find<FrameworkElement>(w, n);
+                    var center = nav.TransformToVisual(field).Transform(new Point(nav.ActualWidth / 2, nav.ActualHeight / 2));
+                    return field.AlphaAt(center) <= 0.02;
+                });
+                T.Check(quiet, "ray efekti gezinme yazılarının arkasında boş (" + size[0] + ")");
+                var low = new Point(field.ActualWidth / 2, field.ActualHeight * 0.85);
+                T.Check(field.AlphaAt(low) > 0.02 && field.AlphaAt(low) <= 0.32, "ray efekti alt bölümde hafifçe görünüyor (" + field.AlphaAt(low).ToString("0.00") + ")");
+                if (size[0] == 1180) {
+                    Motion.Enabled = false;
+                    field.Trail(new Point(40, 300));
+                    T.Check(!field.IsAnimating, "Windows animasyonları kapalıyken ray efekti durgun");
+                    Motion.Enabled = true;
+                    var spot = new Point(40, 120);
+                    field.Trail(spot);
+                    T.Check(field.IsAnimating && field.AlphaAt(spot) > 0.05, "fare izi karakterleri karıştırıyor");
+                    field.Advance(2.5);
+                    T.Check(!field.IsAnimating && field.AlphaAt(spot) <= 0.02, "iz kısa sürede sönüp efekt duruyor");
+                    field.Wave(new Point(60, 400));
+                    field.Advance(0.3);
+                    T.Check(field.IsAnimating, "tıklama dalgası yayılıyor");
+                    field.Advance(2);
+                    T.Check(!field.IsAnimating, "dalga sönüp efekt duruyor");
+                    Motion.Enabled = false;
+                }
+                w.Close();
+            }
+        }
+
         // Sentient (one Regular cut) carries headings and text; Bahnschrift keeps buttons, tabs, the rail and figures.
         // Sentient text never asks for a heavier weight, which WPF would fake.
         static void TypeChecks() {
@@ -388,6 +431,7 @@ namespace FlowTests {
             Find<TextBox>(w, "UrlBox").Text = "https://www.youtube.com/watch?v=jNQXAC9IVRw";
             Wait(() => Find<TextBlock>(w, "VideoTitle").Text != Loc.T("preview.empty.title") && !Find<TextBlock>(w, "VideoTitle").Text.StartsWith(Loc.T("preview.loading")) && Find<WrapPanel>(w, "Chips").Children.Count > 0, 4000);
             Shot(w, "download-preview-" + size, theme);
+            if (width == 1180) ShotMenu(w, theme);
             ShotQueue(c);
             c.ShowPage("queue"); Pump();
             Shot(w, "queue-" + size, theme);
@@ -396,6 +440,22 @@ namespace FlowTests {
             c.ShowPage("settings"); Pump();
             Shot(w, "settings-" + size, theme);
             w.Close();
+        }
+
+        // The open list of "Dosya türü": it lives in its own popup layer, so it is shot on its own.
+        static void ShotMenu(Window w, string theme) {
+            var box = Find<ComboBox>(w, "FormatBox");
+            box.IsDropDownOpen = true; Pump();
+            var popup = box.Template.FindName("PART_Popup", box) as System.Windows.Controls.Primitives.Popup;
+            var panel = popup == null ? null : popup.Child as FrameworkElement;
+            if (panel != null && panel.ActualWidth > 0) {
+                foreach (var scale in new[] { 1.0, 1.5 }) {
+                    var name = "menu-" + (scale == 1.0 ? "100" : "150") + "-" + theme;
+                    var path = RenderElement(panel, w.Background, name, scale);
+                    T.Check(File.Exists(path), "tasarım çekimi " + name);
+                }
+            } else T.Check(false, "açılır liste çekim için açıldı (" + theme + ")");
+            box.IsDropDownOpen = false; Pump();
         }
 
         static void ShotCloseDialog(string theme) {

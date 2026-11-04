@@ -65,3 +65,17 @@ test('panel.css turns motion off for reduced motion and never transitions everyt
   assert.doesNotMatch(css,/transition\s*:\s*all|transition-property\s*:\s*all/);
   assert.match(css,/transition-property:/);
 });
+test('panel.css sets headings and text in Sentient and keeps controls in Bahnschrift',()=>{
+  assert.match(css,/@font-face \{[^}]*font-family: "Sentient";[^}]*url\("fonts\/Sentient-Regular\.woff2"\)/);
+  assert.match(css,/--body: "Sentient"/);
+  assert.match(css,/--display: "Bahnschrift"/);
+  assert.match(css,/h1, h2 \{[^}]*font-family: var\(--body\)[^}]*font-weight: 400/);
+});
+test('selects are filled fields with one bottom line, like the desktop menus',()=>{
+  const rules=[...css.matchAll(/(?:^|\n)select \{([^}]*)\}/g)].map(m=>m[1]);
+  assert.ok(rules.length,'a select rule');
+  const last=rules.at(-1);
+  assert.match(last,/background: var\(--surface2\)/);
+  assert.match(last,/border: 0/);
+  assert.match(last,/border-bottom: 1px solid var\(--input-border\)/);
+});
