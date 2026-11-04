@@ -88,6 +88,25 @@ namespace FlowTests {
             Motion.Enabled = false;
             c.ShowPage("history");
             T.Check(!Find<ScrollViewer>(w, "HistoryPage").HasAnimatedProperties && Find<ScrollViewer>(w, "HistoryPage").Opacity == 1, "Windows animasyonları kapalıyken sayfa geçişi anında");
+            // Hover and press never run in these tests, so start every template storyboard once: a wrong
+            // target or property path would otherwise surface only on the user's first hover.
+            c.ShowPage("download"); Pump();
+            var broken = new List<string>(); int started = 0;
+            var seen = new HashSet<ControlTemplate>();
+            foreach (var control in Visuals(w).OfType<Control>().Where(x => x.Template != null && x.IsVisible)) {
+                if (!seen.Add(control.Template)) continue;
+                foreach (var trigger in control.Template.Triggers) {
+                    var actions = new List<System.Windows.TriggerAction>();
+                    var plain = trigger as Trigger; var multi = trigger as MultiTrigger;
+                    if (plain != null) { actions.AddRange(plain.EnterActions); actions.AddRange(plain.ExitActions); }
+                    if (multi != null) { actions.AddRange(multi.EnterActions); actions.AddRange(multi.ExitActions); }
+                    foreach (var begin in actions.OfType<System.Windows.Media.Animation.BeginStoryboard>()) {
+                        try { begin.Storyboard.Begin(control, control.Template, true); begin.Storyboard.Stop(control); started++; }
+                        catch (Exception ex) { broken.Add(control.GetType().Name + ": " + ex.Message); }
+                    }
+                }
+            }
+            T.Check(started >= 8 && broken.Count == 0, "şablon animasyonları hedeflerini buluyor (" + started + ")" + (broken.Count == 0 ? "" : ": " + string.Join(" | ", broken)));
             w.Close();
         }
 
