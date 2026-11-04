@@ -3,13 +3,12 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Media;
-using System.Windows.Threading;
 
 namespace Flow {
     // The rail's ASCII field, after a WebGL "gradient ASCII" sketch, redrawn with WPF text. Glyphs from
     // " =+xX0S8#@" rise from the lower rail like a horizon glow; the upper rail, where the labels sit, stays
     // empty. It decodes in once, then rests (no timer). The pointer scrambles a short trail and a click sends
-    // a ring outward; both fade within about a second, then the timer stops again. Windows animations off:
+    // a ring outward; both fade within about a second. While moving it follows the display's frames. Windows animations off:
     // no intro, no trail, no ring. High contrast: nothing is drawn. It never takes input.
     public sealed class AsciiField : FrameworkElement {
         const string Glyphs = " =+xX0S8#@";
@@ -20,8 +19,8 @@ namespace Flow {
 
         sealed class Mark { public Point At; public double Age; }
         readonly List<Mark> trail = new List<Mark>(), waves = new List<Mark>();
-        readonly DispatcherTimer timer;
-        DateTime last;
+        bool running;
+        TimeSpan last;
         double intro = 1, clock;
         FormattedText[,] cache;
         double cacheDip;
@@ -29,14 +28,12 @@ namespace Flow {
         public AsciiField() {
             IsHitTestVisible = false;
             Focusable = false;
-            timer = new DispatcherTimer(DispatcherPriority.Render) { Interval = TimeSpan.FromMilliseconds(50) };
-            timer.Tick += (s, e) => { var now = DateTime.UtcNow; Advance(Math.Min(0.1, (now - last).TotalSeconds)); last = now; };
             Loaded += (s, e) => { Theme.Changed += Restyle; Intro(); };
-            Unloaded += (s, e) => { Theme.Changed -= Restyle; timer.Stop(); };
+            Unloaded += (s, e) => { Theme.Changed -= Restyle; Sleep(); };
         }
         void Restyle() { cache = null; InvalidateVisual(); }
 
-        public bool IsAnimating { get { return timer.IsEnabled; } }
+        public bool IsAnimating { get { return running; } }
 
         // Runs the decode once when the window opens.
         public void Intro() {
@@ -57,7 +54,7 @@ namespace Flow {
             Wake();
         }
 
-        // Moves the field forward; the timer calls it, tests call it directly.
+        // Moves the field forward; each display frame calls it while moving, tests call it directly.
         public void Advance(double seconds) {
             clock += seconds;
             intro = Math.Min(1, intro + seconds / IntroSeconds);
@@ -65,11 +62,20 @@ namespace Flow {
             foreach (var m in waves) m.Age += seconds;
             trail.RemoveAll(m => m.Age >= TrailLife);
             waves.RemoveAll(m => m.Age >= WaveLife);
-            if (intro >= 1 && trail.Count == 0 && waves.Count == 0) timer.Stop();
+            if (intro >= 1 && trail.Count == 0 && waves.Count == 0) Sleep();
             InvalidateVisual();
         }
 
-        void Wake() { if (!timer.IsEnabled) { last = DateTime.UtcNow; timer.Start(); } }
+        // While something moves the field follows the display's own frames (usually 60 Hz); at rest it
+        // leaves the frame clock entirely, so an idle rail costs nothing.
+        void Wake() { if (running) return; running = true; last = TimeSpan.Zero; CompositionTarget.Rendering += OnFrame; }
+        void Sleep() { if (!running) return; running = false; CompositionTarget.Rendering -= OnFrame; }
+        void OnFrame(object sender, EventArgs e) {
+            var now = ((RenderingEventArgs)e).RenderingTime;
+            if (last == TimeSpan.Zero || now <= last) { last = now; return; }
+            double dt = (now - last).TotalSeconds; last = now;
+            Advance(Math.Min(0.1, dt));
+        }
 
         // Opacity of the glyph drawn at a point (0 = empty); the tests use it to keep the labels clear.
         public double AlphaAt(Point at) {
