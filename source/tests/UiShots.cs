@@ -18,7 +18,8 @@ namespace FlowTests {
 
         public static string RenderScaled(Window window, string name, double scale) {
             Pump();
-            var content = (FrameworkElement)window.Content;
+            // The window's template root: client area including the content's own margins (dialogs have them).
+            var content = VisualTreeHelper.GetChildrenCount(window) > 0 ? (FrameworkElement)VisualTreeHelper.GetChild(window, 0) : (FrameworkElement)window.Content;
             double width = content.ActualWidth, height = content.ActualHeight;
             var bitmap = new RenderTargetBitmap((int)Math.Round(width * scale), (int)Math.Round(height * scale), 96 * scale, 96 * scale, PixelFormats.Pbgra32);
             var visual = new DrawingVisual();
@@ -43,7 +44,10 @@ namespace FlowTests {
                 foreach (var text in Visuals(button).OfType<TextBlock>().Where(t => t.IsVisible && !string.IsNullOrEmpty(t.Text))) {
                     // Measure the way the window draws text (Display mode at the window's DPI); allow one pixel of glyph rounding.
                     var formatted = new FormattedText(text.Text, Loc.Culture, text.FlowDirection, new Typeface(text.FontFamily, text.FontStyle, text.FontWeight, text.FontStretch), text.FontSize, Brushes.Black, null, TextOptions.GetTextFormattingMode(text), VisualTreeHelper.GetDpi(text).PixelsPerDip);
-                    if (formatted.Width > text.ActualWidth + 1.0) clipped.Add((string.IsNullOrEmpty(button.Name) ? "" : button.Name + ":") + text.Text);
+                    bool cut;
+                    if (text.TextWrapping == TextWrapping.NoWrap) cut = formatted.Width > text.ActualWidth + 1.0;
+                    else { formatted.MaxTextWidth = Math.Max(1, text.ActualWidth); cut = formatted.Height > text.ActualHeight + 1.0; }  // wrapped text is cut only when lines are lost
+                    if (cut) clipped.Add((string.IsNullOrEmpty(button.Name) ? "" : button.Name + ":") + text.Text);
                 }
             }
             return clipped;
@@ -71,6 +75,33 @@ namespace FlowTests {
             QueueChecks();
             HistoryChecks();
             SettingsChecks();
+            CloseChecks();
+        }
+
+        static void CloseChecks() {
+            var c = OpenWith("ui-redesign-close", "light", 1180, 840);
+            var w = c.Window;
+            foreach (var language in new[] { "tr", "en" }) {
+                Loc.Set(language); Pump();
+                var dialog = new CloseDialog(w, 1);
+                var window = dialog.Window;
+                window.WindowStartupLocation = WindowStartupLocation.Manual;
+                window.Left = -32000; window.Top = -32000; window.ShowActivated = false;
+                window.Show(); Pump();
+                var clipped = ClippedButtons(window);
+                T.Check(clipped.Count == 0, "kapatma penceresi düğmeleri kırpılmıyor (" + language + ")" + (clipped.Count == 0 ? "" : ": " + string.Join(", ", clipped)));
+                var tray = Find<Button>(window, "TrayButton");
+                var plate = tray.Background as SolidColorBrush; var accent = w.Resources["Accent"] as SolidColorBrush;
+                T.Check(plate != null && accent != null && plate.Color == accent.Color, "kapatma: tepsiye küçültme seçeneği pencerenin tek ters plakası (" + language + ")");
+                window.Close(); Pump();
+            }
+            Loc.Set("tr"); Pump();
+            c.ShowMessage("Örnek bildirim", false); Pump();
+            var bar = Find<Border>(w, "MessageBar");
+            var content = (FrameworkElement)w.Content;
+            double barLeft = bar.TransformToAncestor(content).Transform(new Point(0, 0)).X, urlLeft = Find<TextBox>(w, "UrlBox").TransformToAncestor(content).Transform(new Point(0, 0)).X;
+            T.Check(Math.Abs(barLeft - urlLeft) < 1, "bildirim çubuğu içerik sütununa hizalı (" + barLeft.ToString("0") + " / " + urlLeft.ToString("0") + ")");
+            w.Close();
         }
 
         static void SettingsChecks() {

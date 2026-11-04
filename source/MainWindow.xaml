@@ -1103,8 +1103,8 @@
         </Grid>
       </Border>
 
-      <Border x:Name="MessageBar" Grid.Row="1" VerticalAlignment="Bottom" HorizontalAlignment="Center" MaxWidth="780" MinWidth="320" Margin="32,0,32,22" CornerRadius="10" Padding="16,8,8,8" Visibility="Collapsed" Background="{DynamicResource InfoSoft}" BorderBrush="{DynamicResource BorderStrong}" BorderThickness="1">
-        <Border.Effect><DropShadowEffect BlurRadius="18" ShadowDepth="4" Opacity="0.22"/></Border.Effect>
+      <!-- Notice: a flat square bar on the content column's left line, above İndir's action bar. -->
+      <Border x:Name="MessageBar" Grid.Row="1" VerticalAlignment="Bottom" HorizontalAlignment="Left" MaxWidth="780" MinWidth="320" Margin="84,0,37,18" Padding="16,8,8,8" Visibility="Collapsed" Background="{DynamicResource InfoSoft}" BorderBrush="{DynamicResource BorderStrong}" BorderThickness="1">
         <Grid>
           <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
           <TextBlock x:Name="MessageText" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource Info}"/>
