@@ -15,7 +15,8 @@ namespace Flow {
         const double CellW = 8.4, CellH = 14, GlyphSize = 11.5;
         const double TrailLife = 0.7, WaveLife = 1.2, IntroSeconds = 2.2, TrailRadius = 26, WaveSpeed = 300, WaveWidth = 16;
         const double RestAlpha = 0.3, ScrambleAlpha = 0.42;
-        const int Levels = 12, MaxTrail = 24, MaxWaves = 4;
+        const int Levels = 12, MaxTrail = 48, MaxWaves = 4;
+        const double TrailStep = 10;
 
         sealed class Mark { public Point At; public double Age; }
         readonly List<Mark> trail = new List<Mark>(), waves = new List<Mark>();
@@ -31,7 +32,7 @@ namespace Flow {
             Loaded += (s, e) => { Theme.Changed += Restyle; Intro(); };
             Unloaded += (s, e) => { Theme.Changed -= Restyle; Sleep(); };
         }
-        void Restyle() { cache = null; InvalidateVisual(); }
+        void Restyle() { cache = null; rest = null; InvalidateVisual(); }
 
         public bool IsAnimating { get { return running; } }
 
@@ -42,9 +43,16 @@ namespace Flow {
         }
         public void Trail(Point at) {
             if (!Motion.Enabled) return;
-            if (trail.Count > 0) { var head = trail[0]; if ((head.At - at).Length < 6 && head.Age < 0.05) return; }
+            if (trail.Count > 0) {
+                var head = trail[0];
+                double gap = (at - head.At).Length;
+                if (gap < 4) return;
+                // Fill the gap between two pointer events so a fast move leaves one continuous trail.
+                int steps = Math.Min(10, (int)(gap / TrailStep));
+                for (int i = 1; i < steps; i++) trail.Insert(0, new Mark { At = head.At + (at - head.At) * ((double)i / steps), Age = head.Age * (1 - (double)i / steps) });
+            }
             trail.Insert(0, new Mark { At = at });
-            if (trail.Count > MaxTrail) trail.RemoveAt(trail.Count - 1);
+            while (trail.Count > MaxTrail) trail.RemoveAt(trail.Count - 1);
             Wake();
         }
         public void Wave(Point at) {
@@ -107,6 +115,8 @@ namespace Flow {
             return band * (0.3 + 0.7 * grain);
         }
 
+        bool Moving { get { return trail.Count > 0 || waves.Count > 0; } }
+
         void Cell(int col, int row, out int index, out double alpha) {
             double x = (col + 0.5) * CellW, y = (row + 0.5) * CellH;
             double value = Rest(x, y);
@@ -129,12 +139,12 @@ namespace Flow {
             double tone = Math.Pow(Math.Max(0, Math.Min(1, value + jitter)), 0.75);
             index = present && reveal >= 1 ? (int)Math.Round(tone * (Glyphs.Length - 1)) : 0;
             alpha = present && reveal >= 1 ? value * RestAlpha : 0;
-            if (scramble > 0.05) {
-                double frame = Math.Floor(clock * 18);
-                if (Hash(col * 3.7 + frame * 5.3, row * 1.9) < scramble * 1.2) {
-                    index = 1 + (int)Math.Floor(Hash(col + frame * 1.37, row + 7.1) * (Glyphs.Length - 1));
-                    alpha = Math.Max(alpha, scramble * ScrambleAlpha);
-                }
+            // Each cell has a fixed threshold, so as the scramble fades cells drop out one by one, once;
+            // the glyph turns on the cell's own beat, so the trail never pulses as a whole.
+            if (scramble > 0.05 && Hash(col * 5.1 + 2.3, row * 3.3 + 0.9) < scramble * 1.3) {
+                double beat = Math.Floor(clock * 14 + Hash(col * 0.37, row * 0.53) * 14);
+                index = 1 + (int)Math.Floor(Hash(col + beat * 1.37, row + 7.1) * (Glyphs.Length - 1));
+                alpha = Math.Max(alpha, scramble * ScrambleAlpha);
             }
         }
 
@@ -151,21 +161,61 @@ namespace Flow {
                 }
         }
 
+        DrawingGroup rest;
+        Size restSize;
+
+        void Draw(DrawingContext dc, int col, int row, int index, double alpha) {
+            int level = (int)Math.Round(alpha * Levels);
+            if (index <= 0 || level <= 0) return;
+            var text = cache[index, Math.Min(Levels, level)];
+            dc.DrawText(text, new Point(col * CellW + (CellW - text.WidthIncludingTrailingWhitespace) / 2, row * CellH + (CellH - text.Height) / 2));
+        }
+
         protected override void OnRender(DrawingContext dc) {
             if (Theme.Current == "contrast" || ActualWidth <= 0 || ActualHeight <= 0) return;
             EnsureCache(VisualTreeHelper.GetDpi(this).PixelsPerDip);
             int cols = (int)Math.Ceiling(ActualWidth / CellW), rows = (int)Math.Ceiling(ActualHeight / CellH);
-            dc.PushClip(new RectangleGeometry(new Rect(0, 0, ActualWidth, ActualHeight)));
-            for (int row = 0; row < rows; row++)
-                for (int col = 0; col < cols; col++) {
-                    int index; double alpha;
-                    Cell(col, row, out index, out alpha);
-                    int level = (int)Math.Round(alpha * Levels);
-                    if (index <= 0 || level <= 0) continue;
-                    var text = cache[index, Math.Min(Levels, level)];
-                    dc.DrawText(text, new Point(col * CellW + (CellW - text.WidthIncludingTrailingWhitespace) / 2, row * CellH + (CellH - text.Height) / 2));
+            var size = new Size(ActualWidth, ActualHeight);
+            dc.PushClip(new RectangleGeometry(new Rect(size)));
+            if (intro < 1) {
+                for (int row = 0; row < rows; row++)
+                    for (int col = 0; col < cols; col++) { int index; double alpha; Cell(col, row, out index, out alpha); Draw(dc, col, row, index, alpha); }
+            } else {
+                // At rest the field is one cached drawing; moving cells are drawn over it.
+                if (rest == null || restSize != size) {
+                    rest = new DrawingGroup();
+                    var keepTrail = trail.ToArray(); var keepWaves = waves.ToArray(); trail.Clear(); waves.Clear();
+                    using (var r = rest.Open())
+                        for (int row = 0; row < rows; row++)
+                            for (int col = 0; col < cols; col++) { int index; double alpha; Cell(col, row, out index, out alpha); Draw(r, col, row, index, alpha); }
+                    trail.AddRange(keepTrail); waves.AddRange(keepWaves);
+                    rest.Freeze(); restSize = size;
                 }
+                dc.DrawDrawing(rest);
+                var ground = TryFindResource("Sidebar") as Brush;   // covers a resting glyph under a moving one
+                if (Moving)
+                    for (int row = 0; row < rows; row++)
+                        for (int col = 0; col < cols; col++) {
+                            int index; double alpha; double restAlpha;
+                            int restIndex; Cell(col, row, out index, out alpha);
+                            RestCell(col, row, out restIndex, out restAlpha);
+                            if (index != restIndex || Math.Abs(alpha - restAlpha) > 0.001) {
+                                if (restIndex > 0 && ground != null) dc.DrawRectangle(ground, null, new Rect(col * CellW, row * CellH, CellW, CellH));
+                                Draw(dc, col, row, index, alpha);
+                            }
+                        }
+            }
             dc.Pop();
+        }
+
+        // The cell as it looks with nothing moving.
+        void RestCell(int col, int row, out int index, out double alpha) {
+            double x = (col + 0.5) * CellW, y = (row + 0.5) * CellH, value = Rest(x, y);
+            bool present = Hash(col * 1.31 + 0.7, row * 2.17 + 4.1) < 0.25 + 0.75 * Smooth(0.08, 0.7, value);
+            double jitter = (Hash(col * 0.71 + 9.2, row * 1.73) - 0.5) * 0.18;
+            double tone = Math.Pow(Math.Max(0, Math.Min(1, value + jitter)), 0.75);
+            index = present ? (int)Math.Round(tone * (Glyphs.Length - 1)) : 0;
+            alpha = present ? value * RestAlpha : 0;
         }
     }
 }

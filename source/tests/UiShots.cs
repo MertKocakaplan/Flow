@@ -303,8 +303,18 @@ namespace FlowTests {
                     var spot = new Point(40, 120);
                     field.Trail(spot);
                     T.Check(field.IsAnimating && field.AlphaAt(spot) > 0.05, "fare izi karakterleri karıştırıyor");
+                    // Smooth: next to the pointer a cell fades out once; it never blinks off and on frame by frame.
+                    var near = new Point(spot.X + 14, spot.Y);
+                    var seen = new List<double>();
+                    for (int i = 0; i < 20; i++) { seen.Add(field.AlphaAt(near)); field.Advance(1 / 60.0); }
+                    bool smooth = seen[0] > 0.05; for (int i = 1; i < seen.Count; i++) if (seen[i] > seen[i - 1] + 0.001) smooth = false;
+                    T.Check(smooth, "fare izi pürüzsüz söner, yanıp sönmez (" + string.Join(" ", seen.Take(8).Select(v => v.ToString("0.00"))) + ")");
                     field.Advance(2.5);
                     T.Check(!field.IsAnimating && field.AlphaAt(spot) <= 0.02, "iz kısa sürede sönüp efekt duruyor");
+                    // Continuous: a fast move leaves no gap between two pointer events.
+                    field.Trail(new Point(30, 140)); field.Trail(new Point(30, 240));
+                    T.Check(field.AlphaAt(new Point(30, 190)) > 0.05, "hızlı harekette iz kopmuyor");
+                    field.Advance(2.5);
                     field.Wave(new Point(60, 400));
                     field.Advance(0.3);
                     T.Check(field.IsAnimating, "tıklama dalgası yayılıyor");
@@ -316,24 +326,22 @@ namespace FlowTests {
             }
         }
 
-        // Sentient (one Regular cut) carries headings and text; Bahnschrift keeps buttons, tabs, the rail and figures.
-        // Sentient text never asks for a heavier weight, which WPF would fake.
+        // Typography (the user went back from Sentient): Bahnschrift for headings, buttons, tabs, the rail
+        // and figures; Segoe UI for text and inputs. No Sentient anywhere.
         static void TypeChecks() {
             var c = OpenWith("ui-redesign-type", "light", 1180, 840);
             var w = c.Window;
             LoadPreview(c, null);
-            Func<Control, bool> sentient = x => x.FontFamily.Source.Contains("Sentient");
             var title = Find<TextBlock>(w, "HeaderEyebrow");
-            T.Check(title.FontFamily.Source.Contains("Sentient") && Find<TextBlock>(w, "VideoTitle").FontFamily.Source.Contains("Sentient") && sentient(Find<TextBox>(w, "UrlBox")),
-                "Sentient sayfa başlığında, video başlığında ve giriş alanında (" + title.FontFamily.Source + ")");
-            T.Check(!sentient(Find<Button>(w, "StartButton")) && Find<Button>(w, "StartButton").FontFamily.Source.Contains("Bahnschrift") && !Find<RadioButton>(w, "NavQueue").FontFamily.Source.Contains("Sentient"),
-                "düğmeler ve ray Bahnschrift'te kalıyor");
-            var faked = new List<string>();
+            T.Check(title.FontFamily.Source.Contains("Bahnschrift") && title.FontWeight == FontWeights.SemiBold && Find<TextBlock>(w, "VideoTitle").FontFamily.Source.Contains("Bahnschrift"),
+                "başlıklar Bahnschrift SemiBold (" + title.FontFamily.Source + ")");
+            T.Check(Find<TextBox>(w, "UrlBox").FontFamily.Source.Contains("Segoe UI") && w.FontFamily.Source.Contains("Segoe UI"), "metin ve giriş alanları Segoe UI");
+            var sentient = new List<string>();
             foreach (var page in new[] { "download", "queue", "history", "settings" }) {
                 c.ShowPage(page); Pump();
-                faked.AddRange(Visuals(w).OfType<TextBlock>().Where(t => t.IsVisible && t.FontFamily.Source.Contains("Sentient") && t.FontWeight.ToOpenTypeWeight() > 400 && !string.IsNullOrEmpty(t.Text)).Select(t => page + ":" + t.Text));
+                sentient.AddRange(Visuals(w).OfType<TextBlock>().Where(t => t.IsVisible && t.FontFamily.Source.Contains("Sentient")).Select(t => page + ":" + t.Text));
             }
-            T.Check(faked.Count == 0, "Sentient yazılarda yapay kalınlık yok" + (faked.Count == 0 ? "" : ": " + string.Join(", ", faked.Distinct().Take(10))));
+            T.Check(sentient.Count == 0, "Sentient hiçbir yerde kalmadı" + (sentient.Count == 0 ? "" : ": " + string.Join(", ", sentient.Distinct().Take(8))));
             w.Close();
         }
 

@@ -65,11 +65,11 @@ test('panel.css turns motion off for reduced motion and never transitions everyt
   assert.doesNotMatch(css,/transition\s*:\s*all|transition-property\s*:\s*all/);
   assert.match(css,/transition-property:/);
 });
-test('panel.css sets headings and text in Sentient and keeps controls in Bahnschrift',()=>{
-  assert.match(css,/@font-face \{[^}]*font-family: "Sentient";[^}]*url\("fonts\/Sentient-Regular\.woff2"\)/);
-  assert.match(css,/--body: "Sentient"/);
+test('panel.css keeps the desktop type: Bahnschrift headings and controls, Segoe UI text, no Sentient',()=>{
+  assert.doesNotMatch(css,/Sentient/);
+  assert.match(css,/--body: "Segoe UI Variable Text"/);
   assert.match(css,/--display: "Bahnschrift"/);
-  assert.match(css,/h1, h2 \{[^}]*font-family: var\(--body\)[^}]*font-weight: 400/);
+  assert.match(css,/h1 \{ font: 600 [^;]*var\(--display\)/);
 });
 test('selects are filled fields with one bottom line, like the desktop menus',()=>{
   const rules=[...css.matchAll(/(?:^|\n)select \{([^}]*)\}/g)].map(m=>m[1]);

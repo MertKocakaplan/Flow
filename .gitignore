@@ -9,7 +9,3 @@
 /.review-*/
 /.argon-review/
 /.superpowers/
-# Sentient (Fontshare, ITF FFL): embedding in the app is allowed, redistributing the file is not
-/source/fonts/
-/chrome-extension/fonts/
-/opera-extension/fonts/

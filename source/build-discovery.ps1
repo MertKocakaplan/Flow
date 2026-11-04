@@ -10,9 +10,6 @@ New-Item -ItemType Directory -Path $opera -Force | Out-Null
 $production = @('background.js','transport.js','panel.js','panel.html','panel.css','i18n.js','setup.html','setup.js','detection.js','discovery.js','media-panel.js','scan-content.js','package.json')
 foreach($file in $production){Copy-Item -LiteralPath (Join-Path $extension $file) -Destination (Join-Path $opera $file) -Force}
 Copy-Item -LiteralPath (Join-Path $extension 'icons') -Destination $opera -Recurse -Force
-# The text face (not in git) travels with the package when it is present.
-$fonts = Join-Path $extension 'fonts'
-if (Test-Path -LiteralPath $fonts) { Copy-Item -LiteralPath $fonts -Destination $opera -Recurse -Force }
 $manifest = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $extension 'manifest.json') | ConvertFrom-Json
 $manifest.permissions = @($manifest.permissions | Where-Object {$_ -ne 'sidePanel'})
 $manifest.PSObject.Properties.Remove('side_panel')

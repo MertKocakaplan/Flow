@@ -12,8 +12,6 @@ $exe = Join-Path $root 'FlowTests.exe'
 $refs = @('System.dll','System.Core.dll','System.Web.dll','System.Web.Extensions.dll','System.Windows.Forms.dll','System.Drawing.dll','System.Xaml.dll','WPF\WindowsBase.dll','WPF\PresentationCore.dll','WPF\PresentationFramework.dll')
 $compilerArgs = @('/nologo','/target:exe','/platform:x64','/codepage:65001','/main:FlowTests.Program',"/out:$exe","/win32manifest:$PSScriptRoot\app.manifest")
 foreach ($xaml in Get-ChildItem -LiteralPath $PSScriptRoot -Filter *.xaml) { $compilerArgs += "/resource:$($xaml.FullName),$($xaml.Name)" }
-# Text face, when present (not in git; see Typefaces.cs).
-foreach ($font in @(Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'fonts') -Filter *.otf -ErrorAction SilentlyContinue)) { $compilerArgs += "/resource:$($font.FullName),font.$($font.Name)" }
 if (Test-Path -LiteralPath "$PSScriptRoot\app.ico") { $compilerArgs += "/resource:$PSScriptRoot\app.ico,app.ico" }
 foreach ($ref in $refs) { $compilerArgs += '/reference:' + (Join-Path $framework $ref) }
 $compilerArgs += (Get-ChildItem -LiteralPath $PSScriptRoot -Filter *.cs | ForEach-Object { $_.FullName })
