@@ -9,3 +9,18 @@
 /.review-*/
 /.argon-review/
 /.superpowers/
+
+# Only what builds, runs and tests Flow goes in the repo; these stay on this machine
+*.md
+/docs/
+/.impeccable/
+/opera-extension/
+/flow.native.json
+/argon-review.json
+/BASLA.txt
+/README-EN.txt
+/TEST-SONUCLARI.txt
+/UCUNCU-TARAF.txt
+/source/compare-shots.ps1
+/source/browser-tests/shots/*
+!/source/browser-tests/shots/palette.mjs
