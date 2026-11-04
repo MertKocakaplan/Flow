@@ -1,0 +1,11 @@
+# Build outputs in the package folder (source\Flow.exe.config stays tracked)
+/*.exe
+/*.exe.config
+# Bundled third-party binaries; only the manifest is tracked
+/tools/*
+!/tools/components.json
+# Test output, review artifacts, local tool workspaces
+/.test/
+/.review-*/
+/.argon-review/
+/.superpowers/

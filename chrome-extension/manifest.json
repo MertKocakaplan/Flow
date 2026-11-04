@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Flow — Browser Companion",
+  "version": "1.1.0",
+  "minimum_chrome_version": "116",
+  "description": "Discover page media, select downloads and manage the Flow queue on Windows.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2jMctVCoqZGd6wsVmls49EYG8aYTBmAtsJJ7OFhWjrl1WgHxZFExN1nfNpOUN46GdC5RfAYHDS56S86TtZF1vzwlBgm5ZFI10FO35ukQmO4/9SzL2hQxy08tTkpp9nrzWfkiHXNJYvKDcjB9G/wUPTwlMAbPXB2fJXOW4nHX6/QafFUQfItVgdmMlyKtl394Xo84v/u8di806o0HFw7HQZL6cWHX4L5dF59D82Bf47m01Pv0xp2WV74+NHaOPgtadGwEjhQnvqensBzidwKSS+cn1eIj61ETwbVZHRnuWHannZ6YprzXvJfAYCYq5FjAJdPBjoYivXKGqt/+tVbWEwIDAQAB",
+  "permissions": ["activeTab", "contextMenus", "nativeMessaging", "storage", "sidePanel", "scripting", "webRequest", "webNavigation"],
+  "optional_host_permissions": ["http://*/*", "https://*/*"],
+  "background": {"service_worker": "background.js", "type": "module"},
+  "action": {"default_title": "Flow", "default_popup": "panel.html"},
+  "side_panel": {"default_path": "panel.html"},
+  "icons": {"16": "icons/16.png", "32": "icons/32.png", "48": "icons/48.png", "128": "icons/128.png"},
+  "content_security_policy": {"extension_pages": "script-src 'self'; object-src 'none'; base-uri 'none'"}
+}

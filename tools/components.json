@@ -1,0 +1,10 @@
+{
+  "SchemaVersion": 1,
+  "Package": "Flow 2.0",
+  "Components": [
+    { "Name": "yt-dlp", "File": "yt-dlp.exe", "Version": "2026.08.19", "Sha256": "66674953fe251b89f4d08c5f0e35e0728679bd67ab3d7d05c0562af101dd3e7a", "License": "yt-dlp-LICENSE", "Source": "https://github.com/yt-dlp/yt-dlp/releases/tag/2026.08.19", "Updatable": true },
+    { "Name": "FFmpeg", "File": "ffmpeg.exe", "Version": "9.0.2 essentials (gyan.dev)", "Sha256": "3256173f3f8bffd7df12227c68adf68025edb1832273a9530688a7bb1ed8edec", "License": "ffmpeg-LICENSE", "Source": "https://www.gyan.dev/ffmpeg/builds/", "Updatable": false },
+    { "Name": "ffprobe", "File": "ffprobe.exe", "Version": "9.0.2 essentials (gyan.dev)", "Sha256": "f0d36ecbbdd3bcfac3efa078c96c7271c2e68b3810595552ac3b7f17e9a65c52", "License": "ffmpeg-LICENSE", "Source": "https://www.gyan.dev/ffmpeg/builds/", "Updatable": false },
+    { "Name": "Deno", "File": "deno.exe", "Version": "2.9.7", "Sha256": "e020f3e232bd16e33768dee528e5983349c962952051ced0a5d58ad42f5d9b33", "License": "deno-LICENSE.md", "Source": "https://github.com/denoland/deno/releases/tag/v2.9.7", "Updatable": false }
+  ]
+}

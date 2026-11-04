@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="tr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Flow</title><link rel="stylesheet" href="panel.css"><script type="module" src="panel.js"></script></head>
+<body>
+  <header><div class="brand"><img src="icons/48.png" width="32" height="32" alt=""><span>Flow</span></div><button id="show" class="quiet" data-i18n="desktop">Masaüstünü aç</button></header>
+  <div class="connection"><span id="connection" role="status">Bağlantı kontrol ediliyor…</span><button id="connect" class="text" data-i18n="connect">Bağlan</button></div>
+  <div id="setup" class="notice" hidden><p id="setupText"></p><a href="setup.html" target="_blank" rel="noopener" data-i18n="setup">Kurulum ve yardım</a></div>
+  <nav aria-label="Flow"><button id="mediaTab" class="tab" aria-pressed="false"><span data-i18n="pageMedia">Sayfadaki medya</span><span id="mediaCount" class="badge">0</span></button><button id="downloadTab" class="tab selected" aria-pressed="true" data-i18n="newDownload">Yeni indirme</button><button id="queueTab" class="tab" aria-pressed="false"><span data-i18n="queue">Kuyruk</span><span id="count" class="badge">0</span></button></nav>
+  <main>
+    <section id="mediaView" hidden>
+      <h1 data-i18n="discoverTitle">Bu sayfada ne var?</h1>
+      <p id="scanPage" class="muted small"></p>
+      <p class="muted" data-i18n="discoverHint">Videoyu oynatınca yeni akışlar bulunabilir. Bulunan her dosyanın indirilebilirliği Flow’da kontrol edilir.</p>
+      <div class="scan-settings"><button id="autoScan" data-i18n="enableScan">Otomatik taramayı aç</button><button id="scanNow" data-i18n="scanNow">Bu sayfayı tara</button><label class="check"><input id="overlays" type="checkbox" checked><span data-i18n="overlays">Videolarda Flow düğmesi</span></label><p id="scanMode" class="small muted"></p></div>
+      <div id="scanFeedback" class="notice" role="status" aria-live="polite" hidden></div>
+      <label for="mediaFilter" data-i18n="mediaFilter">Medya türü</label>
+      <select id="mediaFilter"><option value="av" data-i18n="videoAudio">Video ve ses</option><option value="all" data-i18n="allMedia">Tümü</option><option value="image" data-i18n="images">Görseller</option><option value="stream" data-i18n="streams">Akışlar</option></select>
+      <div class="selection-bar"><label class="check"><input id="selectAll" type="checkbox"><span data-i18n="selectVisible">Görünenleri seç</span></label><span id="selectedCount" class="small muted" aria-live="polite"></span></div>
+      <p id="mediaEmpty" class="empty" data-i18n="mediaEmpty">Henüz medya bulunmadı. Sayfayı tara veya videoyu oynat.</p><div id="mediaItems"></div>
+      <p id="mediaLimit" class="small muted" hidden data-i18n="mediaLimit">Bu sayfa için ilk 250 medya gösteriliyor.</p>
+      <div class="batch-actions"><label class="check"><input id="batchHold" type="checkbox"><span data-i18n="hold">Sonraya ekle</span></label><button id="sendSelected" class="primary" disabled data-i18n="sendSelected">Seçilenleri Flow’a gönder</button><p class="small muted" data-i18n="batchHint">Bir seferde en fazla 20 öğe. Video: en iyi uyumlu MP4; ses: M4A; görsel: özgün dosya. Farklı kalite için İncele’yi kullan.</p></div>
+      <section id="batchSection" class="notice" hidden><h2 data-i18n="batchTitle">Toplu gönderim</h2><p id="batchProgress" role="status" aria-live="polite"></p><progress id="batchMeter" max="100" aria-label="Toplu gönderim / Batch submission"></progress><div class="row"><button id="stopBatch" data-i18n="stopBatch">Gönderimi durdur</button><button id="retryBatch" data-i18n="retryFailed">Kalanları tekrar dene</button></div><div id="batchResults"></div></section>
+    </section>
+    <section id="downloadView">
+      <h1 data-i18n="title">Bağlantıdan dosyaya</h1><p class="muted" data-i18n="intro">Bağlantıyı seç. Gerisini Flow halletsin.</p>
+      <form id="inspectForm">
+        <label for="url" data-i18n="link">Video veya ses bağlantısı</label>
+        <textarea id="url" rows="2" placeholder="https://…" spellcheck="false" maxlength="8192" required></textarea>
+        <div class="row"><button id="currentTab" type="button" data-i18n="currentTab">Bu sayfayı kullan</button><button id="inspect" class="primary" type="submit" data-i18n="inspect">Bilgileri getir</button></div>
+      </form>
+      <div id="feedback" role="status" aria-live="polite" class="notice" hidden></div>
+      <article id="preview" hidden>
+        <div class="media"><span id="platform" class="eyebrow"></span><h2 id="title"></h2><p id="duration" class="muted"></p></div>
+        <div class="fields"><div><label for="format" data-i18n="format">Dosya türü</label><select id="format"></select></div><div><label for="quality" data-i18n="quality">Kalite</label><select id="quality"></select></div></div>
+        <p id="summary" class="muted"></p><p id="warning" class="notice" hidden></p>
+        <div class="destination"><span class="eyebrow" data-i18n="saveTo">KAYIT KLASÖRÜ</span><p id="folder"></p><span class="muted small" data-i18n="folderHint">Flow’un kayıt ve dosya adı ayarları kullanılır.</span></div>
+        <div class="row"><button id="hold" data-i18n="hold">Sonraya ekle</button><button id="download" class="primary" data-i18n="download">İndir</button></div>
+      </article>
+    </section>
+    <section id="queueView" hidden>
+      <div class="row"><h1 data-i18n="queueTitle">İndirme kuyruğu</h1><button id="refresh" class="text" data-i18n="refresh">Yenile</button></div>
+      <p class="muted" data-i18n="queueHint">Flow açık kaldığı sürece Chrome’u kapatabilirsiniz.</p>
+      <p id="queueFeedback" role="status" aria-live="polite" class="notice" hidden></p>
+      <p id="empty" class="empty" data-i18n="empty">Henüz bir indirme yok.</p><div id="jobs"></div><p id="queueLimit" class="muted small" hidden data-i18n="queueLimit">İlk 100 iş gösteriliyor. Tümünü Flow’da açabilirsiniz.</p>
+    </section>
+  </main>
+  <footer><a href="setup.html" target="_blank" rel="noopener" data-i18n="help">Yardım</a><label class="sr-only" for="language">Language / Dil</label><select id="language"><option value="tr">Türkçe</option><option value="en">English</option></select><button id="sidePanel" class="text" data-i18n="sidePanel">Yan panel</button></footer>
+</body></html>

@@ -1,0 +1,5 @@
+{"_type":"playlist","id":"CAROUSEL1","title":"Post by creator","extractor_key":"Instagram","entries":[
+{"id":"item1","title":"Video 1","extractor_key":"Instagram","duration":7.5,"width":1080,"height":1920,"formats":[{"format_id":"dash-1v","ext":"mp4","vcodec":"avc1.64001F","acodec":"none","width":1080,"height":1920,"tbr":2100},{"format_id":"dash-1a","ext":"m4a","vcodec":"none","acodec":"mp4a.40.2","tbr":128}]},
+{"id":"item2","title":"Photo 2","extractor_key":"Instagram","formats":[{"format_id":"img","ext":"jpg","vcodec":"none","acodec":"none","width":1080,"height":1350}]},
+{"id":"item3","title":"Video 3","extractor_key":"Instagram","duration":12,"width":720,"height":720,"formats":[{"format_id":"8","ext":"mp4","vcodec":"avc1.4D401F","acodec":"mp4a.40.2","width":720,"height":720,"tbr":900}]}
+]}

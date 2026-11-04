@@ -1,0 +1,8 @@
+{"_type":"playlist","id":"PLtest0123456789","title":"Test listesi","channel":"Kanal","extractor_key":"YoutubeTab","playlist_count":5,"entries":[
+{"_type":"url","ie_key":"Youtube","id":"aaaaaaaaaaa","url":"https://www.youtube.com/watch?v=aaaaaaaaaaa","title":"Birinci video","duration":61},
+{"_type":"url","ie_key":"Youtube","id":"bbbbbbbbbbb","url":"https://www.youtube.com/watch?v=bbbbbbbbbbb","title":"[Private video]","duration":null},
+{"_type":"url","ie_key":"Youtube","id":"ccccccccccc","url":"https://www.youtube.com/watch?v=ccccccccccc","title":"[Deleted video]","duration":null},
+{"_type":"url","ie_key":"Youtube","id":"ddddddddddd","url":"https://www.youtube.com/watch?v=ddddddddddd","title":"Üyelere özel","availability":"subscriber_only","duration":300},
+null,
+{"_type":"url","ie_key":"Youtube","id":"eeeeeeeeeee","url":"https://www.youtube.com/watch?v=eeeeeeeeeee","title":"Son video","duration":3725}
+]}
