@@ -62,13 +62,20 @@ select { padding: 8px 10px; width: 100%; min-height: 40px; }
 .notice a { color: inherit; }
 
 /* New download: the preview opens on a 2 px rule; the choice and the destination follow. */
-article { margin-top: 18px; border-top: 2px solid var(--border-strong); padding-top: 14px; }
+#preview { margin-top: 18px; border-top: 2px solid var(--border-strong); padding-top: 14px; }
 .media p { margin-bottom: 8px; }
 .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .fields > div { min-width: 0; }
 #summary { font-size: 12.5px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; margin-top: 10px; padding: 8px 10px; background: var(--surface2); color: var(--text); }
 .destination { padding: 10px 0 0; border-top: 1px solid var(--border); margin: 16px 0; }
 .destination p { font-size: 12.5px; overflow-wrap: anywhere; margin: 4px 0; }
+.destination .label { display: block; font: 600 12.5px/1.4 var(--display); }
+.media .meta { margin: 2px 0 0; font-size: 12.5px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.media .meta span + span::before { content: " · "; }
+.media .meta span:empty + span::before { content: none; }
+/* One reversed plate per view: once the preview is open, İndir leads and "Bilgileri getir" steps back. */
+#downloadView:has(#preview:not([hidden])) #inspect { background: var(--surface); color: var(--text); border-color: var(--border-strong); }
+#downloadView:has(#preview:not([hidden])) #inspect:hover:not(:disabled) { background: var(--surface-hover); }
 
 /* Queue rows: hairlines, a numeral cell on the left, the running job's cell is the reversed plate. */
 .job { position: relative; border-bottom: 1px solid var(--border); padding: 12px 0 12px 52px; margin: 0; }
@@ -82,6 +89,21 @@ article { margin-top: 18px; border-top: 2px solid var(--border-strong); padding-
 .job .actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
 .job button { font-size: 12px; min-height: 32px; padding: 4px 10px; }
 .job .error { color: var(--danger); }
+/* The numeral cell: the running percentage as the reversed plate, otherwise the state's mark. */
+.job .figure { position: absolute; left: 0; top: 0; width: 42px; padding: 12px 0 0 4px; font: 300 19px/24px var(--display); font-variant-numeric: tabular-nums; color: var(--text-muted); }
+.job .figure:empty::before { font: 16px/24px "Segoe Fluent Icons", "Segoe MDL2 Assets"; content: "\E738"; }
+.job[data-state="completed"] .figure::before { content: "\E73E"; color: var(--success); }
+.job:is([data-state="failed"], [data-state="needs-action"]) .figure::before { content: "\E7BA"; color: var(--danger); }
+.job[data-state="paused"] .figure::before { content: "\E769"; }
+.job[data-state="retry"] .figure::before { content: "\E72C"; color: var(--warning); }
+.job[data-state="scheduled"] .figure::before { content: "\E823"; }
+.job[data-state="canceled"] .figure::before { content: "\E711"; }
+.job:is([data-state="inspecting"], [data-state="downloading"], [data-state="processing"], [data-state="verifying"]) .figure:empty::before { content: "\E896"; color: var(--accent-text); }
+.job:is([data-state="inspecting"], [data-state="downloading"], [data-state="processing"], [data-state="verifying"]) .figure:not(:empty) { bottom: 0; background: var(--accent); color: var(--on-accent); }
+.job[data-state="completed"] .state { background: var(--success-soft); color: var(--success); }
+.job:is([data-state="failed"], [data-state="needs-action"]) .state { background: var(--danger-soft); color: var(--danger); }
+.job[data-state="retry"] .state { background: var(--warning-soft); color: var(--warning); }
+.job:is([data-state="inspecting"], [data-state="downloading"], [data-state="processing"], [data-state="verifying"]) .state { background: var(--accent-soft); color: var(--accent-text); }
 .empty { padding: 24px 14px; color: var(--text-muted); border-top: 2px solid var(--border-strong); }
 
 footer { display: flex; align-items: center; gap: 12px; padding: 10px 18px 14px; border-top: 1px solid var(--border); font-size: 12px; }

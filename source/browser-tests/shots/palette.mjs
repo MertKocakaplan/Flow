@@ -1,4 +1,4 @@
-// Writes panel.css's palette blocks from source/Theme.cs. Usage: node palette.mjs <body.css>
+// Writes panel.css's palette blocks from source/Theme.cs. Usage: node palette.mjs [body.css]
 // The body (everything after the palette) is kept as given; palette.test.js checks the result.
 import {readFileSync, writeFileSync} from 'node:fs';
 
@@ -16,6 +16,9 @@ const head = '/* Palette: generated from source/Theme.cs by browser-tests/shots/
   + '@media (prefers-color-scheme: dark) { :root { color-scheme: dark; ' + vars(dark) + ' } }\n'
   + ':root[data-theme="light"] { color-scheme: light; ' + vars(light) + ' }\n'
   + ':root[data-theme="dark"] { color-scheme: dark; ' + vars(dark) + ' }\n';
-const body = readFileSync(process.argv[2], 'utf8');
-writeFileSync(new URL('../../../chrome-extension/panel.css', import.meta.url), head + body);
+// Without an argument the body is panel.css itself, after its generated palette lines.
+const target = new URL('../../../chrome-extension/panel.css', import.meta.url);
+const current = readFileSync(target, 'utf8');
+const body = process.argv[2] ? readFileSync(process.argv[2], 'utf8') : current.slice(current.indexOf('\n', current.indexOf(':root[data-theme="dark"]')) + 1);
+writeFileSync(target, head + body);
 console.log('wrote panel.css palette for ' + used.length + ' keys');

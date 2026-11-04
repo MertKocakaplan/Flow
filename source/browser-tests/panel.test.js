@@ -114,3 +114,17 @@ test('saved language and queue actions remain usable',async()=>{
   assert.equal(p.requests.at(-2).action,'pause');assert.equal(p.requests.at(-2).jobId,'q1');
   assert.equal(job.querySelector('progress').hidden,true);assert.equal([...job.querySelectorAll('button')].find(b=>b.textContent==='Resume').hidden,false);
 });
+
+test('queue rows carry their state and the running percentage in the numeral cell',async()=>{
+  const items=[
+    {id:'a',title:'Running',state:'downloading',stateText:'Downloading',detail:'',error:'',progress:62.4,canPause:true},
+    {id:'b',title:'Waiting',state:'queued',stateText:'Queued',detail:'',error:''},
+    {id:'c',title:'Held',state:'paused',stateText:'Paused',detail:'',error:'',progress:40,canResume:true},
+    {id:'d',title:'Done',state:'completed',stateText:'Completed',detail:'',error:''},
+    {id:'e',title:'Broken',state:'failed',stateText:'Failed',detail:'',error:'Gone',canRetry:true}];
+  const p=await panel({reply:r=>r.action==='queue'?success({total:5,active:1,items}):undefined});
+  await p.event('queueTab');
+  const jobs=[...p.get('jobs').children];
+  assert.deepEqual(jobs.map(j=>j.dataset.state),items.map(i=>i.state));
+  assert.deepEqual(jobs.map(j=>j.querySelector('.figure')?.textContent),['62%','','','','']);
+});

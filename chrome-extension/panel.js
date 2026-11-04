@@ -123,19 +123,22 @@ function renderQueue(data) {
   for (const job of data.items) {
     keep.add(job.id); let n = nodes.get(job.id);
     if (!n) {
-      const root = element('article','job'), title = element('h2'), state = element('span','state'), progress = element('progress'), detail = element('p','muted'), error = element('p','error'), actions = element('div','actions');
+      const root = element('article','job'), figure = element('span','figure'), title = element('h2'), state = element('span','state'), progress = element('progress'), detail = element('p','muted'), error = element('p','error'), actions = element('div','actions');
       progress.max = 100;
-      n = {root,title,state,progress,detail,error,actions,buttons:{}};
+      n = {root,figure,title,state,progress,detail,error,actions,buttons:{}};
       for (const action of ['pause','resume','retry','cancel']) {
         const button = element('button'); button.type = 'button'; button.addEventListener('click', async () => {
           if (action === 'cancel' && !confirm(t('cancelConfirm'))) return;
           button.disabled = true; const result = await send(action,{jobId:job.id}); accept(result,true); await refreshQueue(); button.disabled = false;
         }); actions.append(button); n.buttons[action] = button;
       }
-      root.append(title,state,progress,detail,error,actions); nodes.set(job.id,n);
+      root.append(figure,title,state,progress,detail,error,actions); nodes.set(job.id,n);
     }
     n.title.textContent = job.title; n.state.textContent = job.stateText; n.detail.textContent = job.detail; n.error.textContent = job.error; n.error.hidden = !job.error;
-    n.progress.hidden = !['inspecting','downloading','processing','verifying'].includes(job.state);
+    const running = ['inspecting','downloading','processing','verifying'].includes(job.state);
+    // The numeral cell shows the running percentage; other states draw their mark from data-state in CSS.
+    n.root.dataset.state = job.state; n.figure.textContent = running && job.progress != null ? Math.floor(job.progress) + '%' : '';
+    n.progress.hidden = !running;
     n.progress.setAttribute('aria-label',job.title);
     if (job.progress == null) n.progress.removeAttribute('value'); else n.progress.value = job.progress;
     for (const action of ['pause','resume','retry','cancel']) { n.buttons[action].textContent = t(action); n.buttons[action].hidden = !job['can'+action[0].toUpperCase()+action.slice(1)]; }
