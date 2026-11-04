@@ -70,6 +70,20 @@ namespace FlowTests {
             DownloadChecks();
             QueueChecks();
             HistoryChecks();
+            SettingsChecks();
+        }
+
+        static void SettingsChecks() {
+            var c = OpenWith("ui-redesign-settings", "light", 1180, 840);
+            var w = c.Window;
+            c.ShowPage("settings"); Pump();
+            var page = Find<ScrollViewer>(w, "SettingsPage");
+            var content = (FrameworkElement)page.Content;
+            Func<string, double> left = name => Find<FrameworkElement>(w, name).TransformToAncestor(content).Transform(new Point(0, 0)).X;
+            T.Check(left("LanguageBox") >= 180 && Math.Abs(left("LanguageBox") - left("DefaultFolderBox")) < 1 && Math.Abs(left("LanguageBox") - left("ParallelBox")) < 1,
+                "Ayarlar: bölüm başlıkları sol kenar sütununda, denetimler tek bir dikey çizgide (" + left("LanguageBox").ToString("0") + ")");
+            PageFits(c, "SettingsPage", "Ayarlar");
+            w.Close();
         }
 
         static void HistoryChecks() {

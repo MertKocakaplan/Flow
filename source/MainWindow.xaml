@@ -906,11 +906,16 @@
 
       <!-- Settings page -->
       <ScrollViewer x:Name="SettingsPage" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed" Focusable="False">
-        <StackPanel MaxWidth="1000" Margin="32,4,26,28">
+        <Grid Margin="32,0,26,28">
+          <!-- Settings: marginal headings on the left grid line, every control on one vertical line to their right. -->
+          <Grid.ColumnDefinitions><ColumnDefinition Width="*" MaxWidth="1052"/><ColumnDefinition Width="0.001*"/></Grid.ColumnDefinitions>
+          <StackPanel>
           <TextBlock Style="{StaticResource PageSub}" Text="{DynamicResource s.set.subtitle}"/>
           <Border Style="{StaticResource Card}">
-            <StackPanel>
-              <TextBlock Style="{StaticResource Section}" Text="{DynamicResource s.set.appearance}"/>
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="200"/><ColumnDefinition/></Grid.ColumnDefinitions>
+              <TextBlock Style="{StaticResource Section}" Text="{DynamicResource s.set.appearance}" TextWrapping="Wrap" Margin="0,0,16,12"/>
+              <StackPanel Grid.Column="1">
               <Grid>
                 <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="14"/><ColumnDefinition/></Grid.ColumnDefinitions>
                 <StackPanel>
@@ -931,11 +936,14 @@
                 </StackPanel>
               </Grid>
               <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource s.set.language.note}" Margin="0,10,0,0"/>
-            </StackPanel>
+              </StackPanel>
+            </Grid>
           </Border>
           <Border Style="{StaticResource Card}">
-            <StackPanel>
-              <TextBlock Style="{StaticResource Section}" Text="{DynamicResource s.set.downloads}"/>
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="200"/><ColumnDefinition/></Grid.ColumnDefinitions>
+              <TextBlock Style="{StaticResource Section}" Text="{DynamicResource s.set.downloads}" TextWrapping="Wrap" Margin="0,0,16,12"/>
+              <StackPanel Grid.Column="1">
               <TextBlock Style="{StaticResource Label}" Text="{DynamicResource s.set.folder}"/>
               <Grid>
                 <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
@@ -945,11 +953,14 @@
               </Grid>
               <CheckBox x:Name="AutoPreviewBox" Content="{DynamicResource s.set.autopreview}" Margin="0,16,0,0"/>
               <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource s.set.autopreview.note}" Margin="30,4,0,0"/>
-            </StackPanel>
+              </StackPanel>
+            </Grid>
           </Border>
           <Border Style="{StaticResource Card}">
-            <StackPanel>
-              <TextBlock Style="{StaticResource Section}" Text="{DynamicResource s.set.queue}"/>
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="200"/><ColumnDefinition/></Grid.ColumnDefinitions>
+              <TextBlock Style="{StaticResource Section}" Text="{DynamicResource s.set.queue}" TextWrapping="Wrap" Margin="0,0,16,12"/>
+              <StackPanel Grid.Column="1">
               <Grid>
                 <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="14"/><ColumnDefinition/></Grid.ColumnDefinitions>
                 <StackPanel>
@@ -974,20 +985,14 @@
               <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource s.set.retries.note}" Margin="0,8,0,0"/>
               <CheckBox x:Name="ResumeBox" Content="{DynamicResource s.set.resume}" Margin="0,14,0,0"/>
               <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource s.set.resume.note}" Margin="30,4,0,0"/>
-            </StackPanel>
+              </StackPanel>
+            </Grid>
           </Border>
           <Border Style="{StaticResource Card}">
-            <StackPanel>
-              <TextBlock Style="{StaticResource Section}" Text="{DynamicResource s.set.window}"/>
-              <CheckBox x:Name="MinimizeTrayBox" Content="{DynamicResource s.set.minimizeTray}"/>
-              <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource s.set.closeChoice.note}" Margin="0,12,0,0"/>
-              <CheckBox x:Name="NotifyBox" Content="{DynamicResource s.set.notify}" Margin="0,12,0,0"/>
-              <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource s.set.notify.note}" Margin="30,4,0,0"/>
-            </StackPanel>
-          </Border>
-          <Border Style="{StaticResource Card}">
-            <StackPanel>
-              <TextBlock Style="{StaticResource Section}" Text="{DynamicResource s.set.speed}"/>
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="200"/><ColumnDefinition/></Grid.ColumnDefinitions>
+              <TextBlock Style="{StaticResource Section}" Text="{DynamicResource s.set.speed}" TextWrapping="Wrap" Margin="0,0,16,12"/>
+              <StackPanel Grid.Column="1">
               <Grid>
                 <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="14"/><ColumnDefinition/></Grid.ColumnDefinitions>
                 <StackPanel>
@@ -1005,29 +1010,33 @@
               <CheckBox x:Name="WindowsTaskBox" Content="{DynamicResource s.set.windowsTask}" Margin="0,14,0,0"/>
               <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource s.set.windowsTask.note}" Margin="30,4,0,0"/>
               <TextBlock x:Name="WindowsTaskStatus" Style="{StaticResource AutoHide}" Margin="30,6,0,0"/>
-            </StackPanel>
+              </StackPanel>
+            </Grid>
           </Border>
           <Border Style="{StaticResource Card}">
-            <StackPanel>
-              <TextBlock Style="{StaticResource Section}" Text="{DynamicResource s.set.data}"/>
-              <TextBlock x:Name="DataFolderText" Style="{StaticResource Hint}"/>
-              <TextBlock x:Name="ImportText" Style="{StaticResource Hint}" Margin="0,6,0,0"/>
-              <WrapPanel Margin="0,12,0,0">
-                <Button x:Name="OpenDataButton" Content="{DynamicResource s.set.data.open}" Margin="0,0,8,8"/>
-                <Button x:Name="CopyDiagnosticsButton" Content="{DynamicResource s.set.diagnostics}" Margin="0,0,8,8" ToolTip="{DynamicResource s.set.diagnostics.tip}"/>
-              </WrapPanel>
-            </StackPanel>
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="200"/><ColumnDefinition/></Grid.ColumnDefinitions>
+              <TextBlock Style="{StaticResource Section}" Text="{DynamicResource s.set.window}" TextWrapping="Wrap" Margin="0,0,16,12"/>
+              <StackPanel Grid.Column="1">
+              <CheckBox x:Name="MinimizeTrayBox" Content="{DynamicResource s.set.minimizeTray}"/>
+              <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource s.set.closeChoice.note}" Margin="0,12,0,0"/>
+              <CheckBox x:Name="NotifyBox" Content="{DynamicResource s.set.notify}" Margin="0,12,0,0"/>
+              <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource s.set.notify.note}" Margin="30,4,0,0"/>
+              </StackPanel>
+            </Grid>
           </Border>
           <Border Style="{StaticResource Card}">
-            <StackPanel>
-              <TextBlock Style="{StaticResource Section}" Text="{DynamicResource s.comp.title}"/>
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="200"/><ColumnDefinition/></Grid.ColumnDefinitions>
+              <TextBlock Style="{StaticResource Section}" Text="{DynamicResource s.comp.title}" TextWrapping="Wrap" Margin="0,0,16,12"/>
+              <StackPanel Grid.Column="1">
               <ItemsControl x:Name="ComponentList" Focusable="False">
                 <ItemsControl.ItemTemplate><DataTemplate>
                   <Grid Margin="0,0,0,8">
-                    <Grid.ColumnDefinitions><ColumnDefinition Width="110"/><ColumnDefinition Width="200"/><ColumnDefinition Width="Auto"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="96"/><ColumnDefinition Width="150"/><ColumnDefinition Width="Auto"/><ColumnDefinition/></Grid.ColumnDefinitions>
                     <TextBlock Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center"/>
                     <TextBlock Grid.Column="1" Text="{Binding VersionText}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" FontFamily="Consolas" FontSize="12.5"/>
-                    <Border x:Name="Chip" Grid.Column="2" CornerRadius="10" Padding="8,1" Background="{DynamicResource Surface2}" VerticalAlignment="Center">
+                    <Border x:Name="Chip" Grid.Column="2" Padding="8,1" Background="{DynamicResource Surface2}" VerticalAlignment="Center">
                       <TextBlock x:Name="ChipText" Text="{Binding StateText}" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource TextMuted}"/>
                     </Border>
                     <TextBlock Grid.Column="3" Text="{Binding Detail}" Style="{StaticResource Hint}" Margin="10,0,0,0" VerticalAlignment="Center"/>
@@ -1047,16 +1056,35 @@
               </WrapPanel>
               <ProgressBar x:Name="ComponentProgress" IsIndeterminate="True" Height="4" Margin="0,4,0,0" Visibility="Collapsed"/>
               <TextBlock x:Name="ComponentStatusText" Style="{StaticResource AutoHide}" Margin="0,6,0,0"/>
-            </StackPanel>
+              </StackPanel>
+            </Grid>
           </Border>
           <Border Style="{StaticResource Card}">
-            <StackPanel>
-              <TextBlock Style="{StaticResource Section}" Text="{DynamicResource s.set.about}"/>
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="200"/><ColumnDefinition/></Grid.ColumnDefinitions>
+              <TextBlock Style="{StaticResource Section}" Text="{DynamicResource s.set.data}" TextWrapping="Wrap" Margin="0,0,16,12"/>
+              <StackPanel Grid.Column="1">
+              <TextBlock x:Name="DataFolderText" Style="{StaticResource Hint}"/>
+              <TextBlock x:Name="ImportText" Style="{StaticResource Hint}" Margin="0,6,0,0"/>
+              <WrapPanel Margin="0,12,0,0">
+                <Button x:Name="OpenDataButton" Content="{DynamicResource s.set.data.open}" Margin="0,0,8,8"/>
+                <Button x:Name="CopyDiagnosticsButton" Content="{DynamicResource s.set.diagnostics}" Margin="0,0,8,8" ToolTip="{DynamicResource s.set.diagnostics.tip}"/>
+              </WrapPanel>
+              </StackPanel>
+            </Grid>
+          </Border>
+          <Border Style="{StaticResource Card}">
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="200"/><ColumnDefinition/></Grid.ColumnDefinitions>
+              <TextBlock Style="{StaticResource Section}" Text="{DynamicResource s.set.about}" TextWrapping="Wrap" Margin="0,0,16,12"/>
+              <StackPanel Grid.Column="1">
               <TextBlock x:Name="AboutText" Style="{StaticResource Hint}"/>
               <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource s.set.about.note}" Margin="0,6,0,0"/>
-            </StackPanel>
+              </StackPanel>
+            </Grid>
           </Border>
-        </StackPanel>
+          </StackPanel>
+        </Grid>
       </ScrollViewer>
       <!-- Notice shown above every page -->
       <!-- İndir's action bar: the screen's one reversed plate stays in view while the form scrolls. -->
