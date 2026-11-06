@@ -100,13 +100,13 @@ namespace FlowTests {
             T.Check(!result.RolledBack && result.NewVersion != null && (result.Changed ? Components.HasBackup(tools) : true), "live: engine update on a copy runs the official updater and keeps a backup when changed");
             if (result.Changed) {
                 var restored = Task.Run(() => Components.Rollback(tools, CancellationToken.None)).GetAwaiter().GetResult();
-                T.Check(restored == "2026.08.19" && Components.Hash(Path.Combine(tools, "yt-dlp.exe")) == original, "live: previous engine restored byte for byte");
+                T.Check(restored == result.OldVersion && Components.Hash(Path.Combine(tools, "yt-dlp.exe")) == original, "live: previous engine restored byte for byte");
             }
             // A new engine that breaks a previously working reference check is rolled back.
             int calls = 0;
             Func<string, CancellationToken, Task<bool>> breaks = (exe, t) => Task.FromResult(calls++ == 0);
             var broken = Task.Run(() => Components.UpdateEngine(tools, () => 0, breaks, l => {}, CancellationToken.None)).GetAwaiter().GetResult();
-            T.Check(broken.RolledBack && Components.Hash(Path.Combine(tools, "yt-dlp.exe")) == original && broken.NewVersion == "2026.08.19", "live: failed post-update check restores the previous engine");
+            T.Check(broken.RolledBack && Components.Hash(Path.Combine(tools, "yt-dlp.exe")) == original && broken.NewVersion == broken.OldVersion, "live: failed post-update check restores the previous engine");
             T.Rejects(() => Task.Run(() => Components.UpdateEngine(tools, () => 1, ok, l => {}, CancellationToken.None)).GetAwaiter().GetResult(), ErrorCode.UpdateBusy, "live: no engine update while downloads are active");
             T.Check(Components.Hash(Path.Combine(Engine.ToolsDir, "yt-dlp.exe")) == Components.Load(Engine.ToolsDir).Components[0].Sha256, "live: the packaged engine was not modified by the tests");
         }

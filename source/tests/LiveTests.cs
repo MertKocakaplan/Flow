@@ -97,7 +97,8 @@ namespace FlowTests {
             var slow = Media.Opt("custom", "mp4", 360, "auto"); slow.Folder = Path.Combine(root, "slow"); slow.SpeedLimit = 40 * 1024;
             var parsed = Platforms.Parse(zoo);
             var f = q.Add(new DownloadJob { Url = parsed.Url, Platform = "YouTube", Options = slow }, false);
-            UiTests.Wait(() => f.Job.State == JobState.Downloading && f.ProgressValue > 5, 90000);
+            // The engine writes in blocks of about 120 KiB; pausing earlier can leave nothing on disk to resume from.
+            UiTests.Wait(() => f.Job.State == JobState.Downloading && f.ProgressValue > 40, 90000);
             q.Pause(f);
             UiTests.Wait(() => f.Job.State == JobState.Paused, 15000);
             long partial = EngineExecutor.PartsSize(f.Job.TempDir);
@@ -105,7 +106,7 @@ namespace FlowTests {
             f.Job.Options.SpeedLimit = 0;
             q.Resume(f);
             UiTests.Wait(() => JobState.IsFinished(f.Job.State), 120000);
-            var resumed = f.ResumedBytes >= partial * 0.9 || f.LogText.Contains("Resuming download at byte");
+            var resumed = partial > 0 && (f.ResumedBytes >= partial * 0.9 || f.LogText.Contains("Resuming download at byte"));
             Note("Pause/resume: " + Describe(f) + " resumed-from-part=" + resumed);
             T.Check(f.Job.State == JobState.Completed && resumed && Probe(f.Job.OutputPath).Duration > 17, "live: resumed from the partial file and completed a full-length file");
 
