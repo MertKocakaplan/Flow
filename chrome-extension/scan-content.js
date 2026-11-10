@@ -80,20 +80,28 @@ const buttons=new Map();
 const root=document.createElement('div'); root.id='flow-media-tools';
 const shadow=root.attachShadow({mode:'closed'});
 const style=document.createElement('style');
-// Afiş ızgarası on the page's video: a square cobalt plate (Theme.cs Accent) with a white frame, so it reads on any picture.
-style.textContent=':host{all:initial}button{position:fixed;z-index:2147483646;font:600 12.5px/1.3 Bahnschrift,"Segoe UI",system-ui,sans-serif;color:#ffffff;background:#1f3fd1;border:1px solid #ffffff;border-radius:0;padding:8px 12px;cursor:pointer;max-width:170px}button:hover{background:#1a35b3}button:active{background:#152b91}button:focus-visible{outline:3px solid #ffffff;outline-offset:2px}button[hidden]{display:none!important}';
+// On the page's video only Flow's mark: a small square cobalt plate (Theme.cs Accent) with a white frame and the
+// wave-and-arrow drawn in white, so it reads on any picture without covering it. Its name is said by screen readers
+// and shown on hover.
+style.textContent=':host{all:initial}button{position:fixed;z-index:2147483646;width:30px;height:30px;padding:0;display:grid;place-items:center;background:#1f3fd1;border:1px solid #ffffff;border-radius:0;cursor:pointer;opacity:.86;transition:opacity 120ms}button:hover{opacity:1;background:#1a35b3}button:active{background:#152b91}button:focus-visible{opacity:1;outline:3px solid #ffffff;outline-offset:2px}button[hidden]{display:none!important}svg{width:22px;height:22px;display:block}@media (prefers-reduced-motion:reduce){button{transition:none}}';
+// Built element by element: pages with Trusted Types (YouTube) refuse markup strings.
+function mark(){const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg'),path=document.createElementNS(ns,'path');
+  svg.setAttribute('viewBox','0 0 34 34');svg.setAttribute('aria-hidden','true');svg.setAttribute('focusable','false');
+  for(const [k,v] of [['d','M 8,12 C 12,8 15,16 19,12 C 22,9 24,11 26,12 M 17,15 L 17,25 M 13,21 L 17,25 21,21'],['fill','none'],['stroke','#ffffff'],['stroke-width','2.6'],['stroke-linecap','round'],['stroke-linejoin','round']])path.setAttribute(k,v);
+  svg.append(path);return svg;}
+const label=()=>language==='en'?'Download with Flow':'Flow ile indir';
 shadow.append(style);
 function send(message){try{chrome.runtime.sendMessage(message).catch(()=>{});}catch{stop();}}
-function position(){for(const [video,button] of buttons){if(!video.isConnected){button.remove();buttons.delete(video);continue;}const r=video.getBoundingClientRect();button.hidden=!enabled||!overlays||r.width<180||r.height<100||r.bottom<0||r.top>innerHeight;button.style.left=Math.max(4,Math.min(innerWidth-174,r.right-174))+'px';button.style.top=Math.max(4,r.top+10)+'px';}}
+function position(){for(const [video,button] of buttons){if(!video.isConnected){button.remove();buttons.delete(video);continue;}const r=video.getBoundingClientRect();button.hidden=!enabled||!overlays||r.width<140||r.height<80||r.bottom<0||r.top>innerHeight;button.style.left=Math.max(4,Math.min(innerWidth-38,r.right-38))+'px';button.style.top=Math.max(4,r.top+8)+'px';}}
 function updateButtons(){
   if(!overlays){for(const b of buttons.values())b.hidden=true;return;}
   if(!root.isConnected)(document.body||document.documentElement).append(root);
   for(const video of [...document.querySelectorAll('video')].slice(0,30))if(!buttons.has(video)){
-    const b=document.createElement('button');b.type='button';b.textContent=language==='en'?'Download with Flow':'Flow ile indir';
+    const b=document.createElement('button');b.type='button';b.append(mark());b.setAttribute('aria-label',label());b.title=label();
     b.addEventListener('click',event=>{if(!event.isTrusted)return;event.preventDefault();event.stopPropagation();const src=video.currentSrc||video.src;send({type:'scan-open',pageUrl:location.href,item:{url:src?.startsWith('blob:')?location.href:src||location.href,kind:'video',title:document.title,protected:!!video.mediaKeys||video.dataset.flowEncrypted==='true'}});});
     shadow.append(b);buttons.set(video,b);
   }
-  for(const b of buttons.values())b.textContent=language==='en'?'Download with Flow':'Flow ile indir';position();
+  for(const b of buttons.values()){b.setAttribute('aria-label',label());b.title=label();}position();
 }
 function scan(){timer=null;if(!enabled)return;
   if(location.href!==lastUrl){lastUrl=location.href;lastPayload='';resourceEpoch=performance.now();}

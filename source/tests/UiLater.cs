@@ -19,6 +19,7 @@ namespace FlowTests {
             Stage7Ui();
             FixUi();
             NextUi();
+            LinkUi();
         }
 
         static void Stage3Ui() {

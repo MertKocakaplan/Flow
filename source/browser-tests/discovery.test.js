@@ -90,3 +90,10 @@ test('a history update on the same address keeps the list and a manual scan',asy
   await h.d.navigate({tabId:9,frameId:0,url:'https://example.com/next',timeStamp:Date.now()},true);
   assert.equal(h.d.tabs[9],undefined,'a new address on a single-page site is a new page');
 });
+
+test('the toolbar count is a cobalt plate with white figures',async()=>{
+  const colors=[],text=[];
+  const api={storage:{local:{get:async()=>({}),set:async()=>{}},session:{get:async()=>({}),set:async()=>{}}},action:{setBadgeText:async()=>{},setBadgeBackgroundColor:async o=>colors.push(o.color),setBadgeTextColor:async o=>text.push(o.color)}};
+  const d=new Discovery(api,()=>{});await d.ready;d.tabs[3]={items:[{}]};await d.badge(3);
+  assert.deepEqual(colors,['#1f3fd1']);assert.deepEqual(text,['#ffffff']);
+});

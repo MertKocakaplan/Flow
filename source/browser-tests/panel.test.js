@@ -17,14 +17,14 @@ const media=()=>({token:'preview-token',title:'<img src=x onerror=alert(1)> İst
   {key:'mp3:0',format:'mp3',height:0,conversion:true}
 ]});
 
-async function panel({reply,draft,language,search='?side'}={}) {
+async function panel({reply,draft,language,search='?side',api={}}={}) {
   const {document,window}=parseHTML(html);
   // Linkedom intentionally omits single-select setters/default selection; emulate HTML semantics.
   for(const select of document.querySelectorAll('select'))Object.defineProperty(select,'value',{
     get(){return [...this.options].find(o=>o.selected)?.value ?? this.options[0]?.value ?? '';},
     set(value){for(const option of this.options)option.removeAttribute('selected');const match=[...this.options].find(o=>o.value===value);if(match)match.selected=true;}
   });
-  const requests=[],changes=[];
+  const requests=[],changes=[],reloads=[],layouts=[];
   const state={session:{draft},local:{language}};
   const storage=Object.fromEntries(['session','local'].map(area=>[area,{
     async get(key){return {[key]:state[area][key]};},
@@ -32,8 +32,10 @@ async function panel({reply,draft,language,search='?side'}={}) {
   }]));
   storage.onChanged={addListener:f=>changes.push(f)};
   const chrome={storage,i18n:{getUILanguage:()=> 'tr'},windows:{getCurrent:async()=>({id:7})},
-    sidePanel:{open:async()=>{}},tabs:{query:async()=>[{url:search.includes('tab=')?'chrome-extension://id/panel.html':'https://example.com/video'}],get:async id=>({id,url:'https://example.com/page-'+id})},
-    runtime:{getContexts:async()=>[],sendMessage:async({request})=>{
+    sidePanel:api.sidePanel||{open:async()=>{}},tabs:{query:async()=>[{url:search.includes('tab=')?'chrome-extension://id/panel.html':'https://example.com/video'}],get:async id=>({id,url:'https://example.com/page-'+id})},
+    runtime:{...api.runtime,getURL:path=>'chrome-extension://id/'+path,getManifest:()=>({version:'1.2.0'}),reload:()=>reloads.push('reload'),getContexts:async()=>[],sendMessage:async(message)=>{
+      if(message.type==='layout'){layouts.push(message);return api.layoutReply===undefined?{ok:true}:api.layoutReply;}
+      const {request}=message;
       requests.push(structuredClone(request));
       const custom=await reply?.(request,storage); if(custom!==undefined)return custom;
       if(request.action==='ping')return success({language:'tr',theme:'dark',folder:'C:\\Downloads',capabilities:['image-original']});
@@ -42,12 +44,12 @@ async function panel({reply,draft,language,search='?side'}={}) {
       return success({jobId:'job-1'});
     }}
   };
-  const context=vm.createContext({document,chrome,location:{search,href:'chrome-extension://id/panel.html'+search},translator,errorText,crypto:webcrypto,URLSearchParams,Intl,confirm:()=>true,setInterval:()=>0,initDiscovery:async()=>({translate(){},refreshButtons(){},refresh(){}})});
+  Object.assign(chrome,api.extra||{});const closed=[];const context=vm.createContext({document,chrome,close:()=>closed.push('window'),location:{search,href:'chrome-extension://id/panel.html'+search},translator,errorText,crypto:webcrypto,URLSearchParams,Intl,confirm:()=>true,setInterval:()=>0,initDiscovery:async()=>({translate(){},refreshButtons(){},refresh(){}})});
   await new vm.Script('(async()=>{'+script+'\n})()').runInContext(context);
   await tick();
   const get=id=>document.getElementById(id);
   const event=async(id,type='click')=>{get(id).dispatchEvent(new window.Event(type,{bubbles:true,cancelable:true}));await tick();};
-  return {get,event,requests,state,storage,document,window};
+  return {get,event,requests,state,storage,document,window,reloads,closed,layouts};
 }
 
 test('missing installation explains setup and disables download',async()=>{
@@ -152,4 +154,78 @@ test('the numeral cell is hidden from screen readers and shrinks at 100%',async(
 });
 test('the desktop language and theme are saved for the setup page',async()=>{
   const p=await panel();assert.equal(p.state.local.desktopLanguage,'tr');assert.equal(p.state.local.desktopTheme,'dark');
+});
+
+test('the panel reports its version and offers an update when Flow packages a newer one',async()=>{
+  const newer=await panel({reply:r=>r.action==='ping'?success({language:'tr',capabilities:['image-original'],extension:{expected:'1.10.0',reload:false}}):undefined});
+  assert.equal(newer.requests[0].ext,'1.2.0');
+  assert.equal(newer.get('extUpdate').hidden,false);assert.match(newer.get('extUpdateText').textContent,/1\.2\.0.*1\.10\.0/);
+  await newer.event('extReload');assert.deepEqual(newer.reloads,['reload']);
+  for(const expected of ['1.2.0','1.1.9',null]){
+    const same=await panel({reply:r=>r.action==='ping'?success({language:'tr',capabilities:['image-original'],extension:{expected,reload:false}}):undefined});
+    assert.equal(same.get('extUpdate').hidden,true,String(expected));assert.equal(same.reloads.length,0);
+  }
+  const old=await panel({reply:r=>r.action==='ping'?success({language:'tr',capabilities:['image-original']}):undefined});
+  assert.equal(old.get('extUpdate').hidden,true,'an older Flow without version data shows nothing');
+});
+test('a reload Flow asked for is carried out when the panel connects',async()=>{
+  const p=await panel({reply:r=>r.action==='ping'?success({language:'tr',capabilities:['image-original'],extension:{expected:'1.3.0',reload:true}}):undefined});
+  assert.deepEqual(p.reloads,['reload']);
+});
+
+test('in the side panel the footer button hands the switch to the worker, which closes the panel first',async()=>{
+  const opened=[];
+  const p=await panel({api:{extra:{action:{openPopup:async()=>opened.push('popup')}}}});
+  assert.equal(p.get('sidePanel').textContent,'Açılır pencereye geç');
+  await p.event('sidePanel');
+  assert.equal(p.layouts.length,1);assert.equal(p.layouts[0].to,'popup');assert.equal(p.layouts[0].windowId,7);
+  assert.deepEqual(opened,[],'the page itself never opens the popup (it would close again at once)');assert.deepEqual(p.closed,[]);
+});
+test('if the worker cannot switch, the side panel opens Flow in a tab and closes',async()=>{
+  const created=[];
+  const p=await panel({api:{layoutReply:null,extra:{tabs:{query:async()=>[{id:12,url:'https://example.com/video'}],create:async o=>created.push(o.url),get:async id=>({id})}}}});
+  await p.event('sidePanel');
+  assert.equal(created.length,1);assert.match(created[0],/panel\.html\?tab=12$/);assert.deepEqual(p.closed,['window']);
+});
+test('the side panel knows it is the side panel while the popup that opened it is still open',async()=>{
+  const both=async()=>[{contextType:'POPUP',documentUrl:'chrome-extension://id/panel.html'},{contextType:'SIDE_PANEL',documentUrl:'chrome-extension://id/panel.html'}];
+  const side=await panel({search:'',api:{runtime:{getContexts:both},extra:{extension:{getViews:()=>({includes:()=>false})}}}});
+  assert.equal(side.get('sidePanel').textContent,'Açılır pencereye geç');assert.equal(side.document.body.classList.contains('popup'),false);
+  const popup=await panel({search:'',api:{runtime:{getContexts:both},extra:{extension:{getViews:()=>({includes:()=>true})}}}});
+  assert.equal(popup.get('sidePanel').textContent,'Yan panel');assert.equal(popup.document.body.classList.contains('popup'),true);
+});
+test('a popup or a tab still offers the side panel',async()=>{
+  const p=await panel({search:'?tab=5'});
+  assert.equal(p.get('sidePanel').textContent,'Yan panel');
+});
+test('a link sent from the video button is inspected at once, once',async()=>{
+  const draft={url:'https://example.com/movie.mp4',referrer:'https://example.com/page',title:'Movie',preview:null,autoInspect:true,requestedAt:1};
+  const p=await panel({draft});
+  assert.equal(p.requests.filter(r=>r.action==='inspect').length,1);
+  assert.equal(p.requests.find(r=>r.action==='inspect').url,'https://example.com/movie.mp4');
+  assert.equal(p.get('preview').hidden,false);assert.equal(p.get('downloadView').hidden,false);
+  await p.storage.session.set({draft:{...draft}});await new Promise(r=>setTimeout(r,20));
+  assert.equal(p.requests.filter(r=>r.action==='inspect').length,1,'the same request is not fetched twice');
+  await p.storage.session.set({draft:{...draft,url:'https://example.com/next.mp4',requestedAt:2}});await new Promise(r=>setTimeout(r,50));
+  assert.equal(p.requests.filter(r=>r.action==='inspect').length,2,'a new click while the panel is open is fetched too');
+});
+test('a draft typed or restored without the button is not inspected by itself',async()=>{
+  const p=await panel({draft:{url:'https://example.com/movie.mp4',preview:null}});
+  assert.equal(p.requests.filter(r=>r.action==='inspect').length,0);
+});
+
+test('the queue page opens the download folder through Flow',async()=>{
+  const p=await panel({reply:r=>r.action==='ping'?success({language:'tr',folder:'C:\Downloads\Flow',capabilities:['image-original','open-folder']}):r.action==='folder'?success({opened:true}):undefined});
+  await p.event('queueTab');
+  assert.equal(p.get('openFolder').hidden,false);assert.equal(p.get('openFolder').textContent,'Klasörü aç');assert.equal(p.get('openFolder').title,'C:\Downloads\Flow');
+  await p.event('openFolder');
+  const sent=p.requests.find(r=>r.action==='folder');assert.ok(sent);assert.equal(Object.keys(sent).sort().join(),'action,v','no path is sent');
+  assert.equal(p.get('queueFeedback').hidden,true);
+});
+test('a missing folder is explained, and an older Flow shows no folder button',async()=>{
+  const p=await panel({reply:r=>r.action==='ping'?success({language:'tr',capabilities:['image-original','open-folder']}):r.action==='folder'?failure('FOLDER_MISSING'):undefined});
+  await p.event('queueTab');await p.event('openFolder');
+  assert.equal(p.get('queueFeedback').hidden,false);assert.match(p.get('queueFeedback').textContent,/henüz yok/);
+  const old=await panel();
+  assert.equal(old.get('openFolder').hidden,true);
 });

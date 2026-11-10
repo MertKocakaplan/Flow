@@ -14,12 +14,13 @@ test('content scanner attaches one accessible overlay and stops when disabled',a
   const chrome={runtime:{sendMessage:async message=>{messages.push(message);return {enabled:true,overlays:true,language:'en'};},onMessage:{addListener:f=>receive=f}}};
   const context=vm.createContext({window,document,chrome,URL,location:{href:'https://example.com/watch'},performance:{getEntriesByType:()=>[]},innerWidth:1000,innerHeight:700,MutationObserver:window.MutationObserver,setTimeout:()=>1,clearTimeout:()=>{},addEventListener:()=>{},removeEventListener:()=>{}});
   const script=new vm.Script('(()=>{'+core+'\n'+body+'\n})();');script.runInContext(context);await tick();
-  assert.ok(messages.some(m=>m.type==='scan-found'&&m.items[0].url.endsWith('a.mp4')));const button=rootShadow.querySelector('button');assert.equal(button.textContent,'Download with Flow');assert.equal(button.hidden,false);assert.equal(button.type,'button');
+  assert.ok(messages.some(m=>m.type==='scan-found'&&m.items[0].url.endsWith('a.mp4')));const button=rootShadow.querySelector('button');assert.equal(button.textContent,'','only the mark, no words over the video');assert.equal(button.getAttribute('aria-label'),'Download with Flow');assert.equal(button.title,'Download with Flow');assert.ok(button.querySelector('svg path'),'Flow mark drawn');assert.equal(button.hidden,false);assert.equal(button.type,'button');
+  assert.equal(button.style.left,'612px','pinned 8 px inside the top right corner of the video');assert.equal(button.style.top,'38px');
   button.dispatchEvent(new window.Event('click'));assert.ok(!messages.some(m=>m.type==='scan-open'),'scripted page clicks are not user gestures');
   script.runInContext(context);assert.equal(document.querySelectorAll('#flow-media-tools').length,1);
   receive({type:'scan-config',enabled:false});assert.equal(document.getElementById('flow-media-tools'),null);
   receive({type:'scan-config',enabled:true,overlays:false,language:'tr'});assert.equal(button.hidden,true);
-  receive({type:'scan-config',enabled:true,overlays:true,language:'tr'});assert.equal(button.textContent,'Flow ile indir');assert.equal(button.hidden,false);
+  receive({type:'scan-config',enabled:true,overlays:true,language:'tr'});assert.equal(button.getAttribute('aria-label'),'Flow ile indir');assert.equal(button.hidden,false);
 });
 test('resource and lazy-image scanning starts only when enabled and excludes prior-page timings',async()=>{
   const {document,window}=parseHTML('<html><head><title>Resources</title></head><body></body></html>');

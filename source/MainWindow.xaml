@@ -91,6 +91,39 @@
         </ControlTemplate.Triggers>
       </ControlTemplate></Setter.Value></Setter>
     </Style>
+    <!-- Rail status lines: a quiet line (the browser link) and a plate that asks for attention (a new version). -->
+    <Style x:Key="RailLink" TargetType="Button">
+      <Setter Property="Foreground" Value="{DynamicResource SidebarText}"/>
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="FontFamily" Value="{StaticResource Display}"/>
+      <Setter Property="FontSize" Value="12.5"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="MinHeight" Value="36"/>
+      <Setter Property="Padding" Value="14,8,10,8"/>
+      <Setter Property="HorizontalContentAlignment" Value="Left"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
+        <Grid>
+          <Border Background="{TemplateBinding Background}"/>
+          <Border x:Name="Hover" Background="{DynamicResource SidebarHover}" Opacity="0"/>
+          <Border x:Name="Ring" Margin="1" BorderBrush="{TemplateBinding Foreground}" BorderThickness="2" Visibility="Collapsed"/>
+          <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center"/>
+        </Grid>
+        <ControlTemplate.Triggers>
+          <Trigger Property="IsMouseOver" Value="True">
+            <Trigger.EnterActions><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Hover" Storyboard.TargetProperty="Opacity" To="1" Duration="{StaticResource MotionFast}"/></Storyboard></BeginStoryboard></Trigger.EnterActions>
+            <Trigger.ExitActions><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Hover" Storyboard.TargetProperty="Opacity" To="0" Duration="{StaticResource MotionFast}"/></Storyboard></BeginStoryboard></Trigger.ExitActions>
+          </Trigger>
+          <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Ring" Property="Visibility" Value="Visible"/></Trigger>
+        </ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <Style x:Key="RailNotice" TargetType="Button" BasedOn="{StaticResource RailLink}">
+      <Setter Property="Background" Value="{DynamicResource SidebarActive}"/>
+      <Setter Property="Foreground" Value="{DynamicResource OnSidebarActive}"/>
+      <Setter Property="Padding" Value="12,10"/>
+    </Style>
     <Style x:Key="NavIcon" TargetType="TextBlock"><Setter Property="FontFamily" Value="{StaticResource Icons}"/><Setter Property="FontSize" Value="16"/><Setter Property="Width" Value="22"/><Setter Property="VerticalAlignment" Value="Center"/></Style>
     <Style x:Key="NavText" TargetType="TextBlock"><Setter Property="Margin" Value="12,0,0,1"/><Setter Property="VerticalAlignment" Value="Center"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="TextTrimming" Value="CharacterEllipsis"/></Style>
 
@@ -409,11 +442,31 @@
           <RadioButton x:Name="NavHistory" Style="{StaticResource Nav}" AutomationProperties.Name="{DynamicResource s.nav.history}" ToolTip="{DynamicResource s.nav.history.tip}">
             <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource NavIcon}" Text="&#xE81C;"/><TextBlock x:Name="NavHistoryText" Style="{StaticResource NavText}" Text="{DynamicResource s.nav.history}"/></StackPanel>
           </RadioButton>
+          <RadioButton x:Name="NavBrowser" Style="{StaticResource Nav}" AutomationProperties.Name="{DynamicResource s.nav.browser}" ToolTip="{DynamicResource s.nav.browser.tip}">
+            <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource NavIcon}" Text="&#xE774;"/><TextBlock x:Name="NavBrowserText" Style="{StaticResource NavText}" Text="{DynamicResource s.nav.browser}"/></StackPanel>
+          </RadioButton>
           <RadioButton x:Name="NavSettings" Style="{StaticResource Nav}" AutomationProperties.Name="{DynamicResource s.nav.settings}" ToolTip="{DynamicResource s.nav.settings.tip}">
             <StackPanel Orientation="Horizontal"><TextBlock Style="{StaticResource NavIcon}" Text="&#xE713;"/><TextBlock x:Name="NavSettingsText" Style="{StaticResource NavText}" Text="{DynamicResource s.nav.settings}"/></StackPanel>
           </RadioButton>
         </StackPanel>
         <StackPanel DockPanel.Dock="Bottom">
+          <!-- A newer Flow release: the rail's one attention plate. -->
+          <Button x:Name="UpdateNotice" Style="{StaticResource RailNotice}" Margin="0,0,0,8" Visibility="Collapsed" ToolTip="{DynamicResource s.update.rail.action}">
+            <StackPanel Orientation="Horizontal">
+              <TextBlock Style="{StaticResource NavIcon}" Text="&#xE896;" VerticalAlignment="Top" Margin="0,1,0,0"/>
+              <StackPanel x:Name="UpdateNoticeTexts" Margin="10,0,0,0" MaxWidth="136">
+                <TextBlock x:Name="UpdateNoticeTitle" TextWrapping="Wrap" FontSize="13"/>
+                <TextBlock Text="{DynamicResource s.update.rail.action}" TextWrapping="Wrap" FontWeight="Normal" FontSize="12" Margin="0,2,0,0" TextDecorations="Underline"/>
+              </StackPanel>
+            </StackPanel>
+          </Button>
+          <!-- The browser extension: filled square while it talks to Flow, empty otherwise. -->
+          <Button x:Name="BrowserLink" Style="{StaticResource RailLink}" Margin="0,0,0,8">
+            <StackPanel Orientation="Horizontal">
+              <Rectangle x:Name="BrowserDot" Width="9" Height="9" Stroke="{DynamicResource SidebarText}" StrokeThickness="1.5" Margin="6,0,7,0" VerticalAlignment="Center"/>
+              <TextBlock x:Name="BrowserLinkText" Margin="10,0,0,1" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+            </StackPanel>
+          </Button>
           <Border x:Name="SidebarActivity" Background="{DynamicResource SidebarActive}" Padding="12,10" Margin="0,0,0,14" Visibility="Collapsed" Cursor="Hand" ToolTip="{DynamicResource s.nav.queue.tip}">
             <StackPanel>
               <TextBlock x:Name="SidebarActivityText" Foreground="{DynamicResource OnSidebarActive}" FontFamily="{StaticResource Display}" FontSize="12.5" FontWeight="SemiBold" Typography.NumeralAlignment="Tabular" TextWrapping="Wrap"/>
@@ -949,6 +1002,99 @@
       </ScrollViewer>
 
       <!-- Settings page -->
+      <!-- Browser page: the extension's connection, its setup in three hanging steps, and its update. -->
+      <ScrollViewer x:Name="BrowserPage" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed" Focusable="False">
+        <Grid Margin="32,0,26,28">
+          <Grid.ColumnDefinitions><ColumnDefinition Width="*" MaxWidth="1052"/><ColumnDefinition Width="0.001*"/></Grid.ColumnDefinitions>
+          <StackPanel>
+          <TextBlock Style="{StaticResource PageSub}" Text="{DynamicResource s.br.subtitle}"/>
+          <Border Style="{StaticResource Card}">
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="200"/><ColumnDefinition/></Grid.ColumnDefinitions>
+              <TextBlock Style="{StaticResource Section}" Text="{DynamicResource s.br.status}" TextWrapping="Wrap" Margin="0,0,16,12"/>
+              <StackPanel Grid.Column="1">
+                <TextBlock x:Name="BrowserStateTitle" FontFamily="{StaticResource Display}" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                <TextBlock x:Name="BrowserStateText" Style="{StaticResource Hint}" Margin="0,4,0,14"/>
+                <Grid>
+                  <Grid.ColumnDefinitions><ColumnDefinition Width="170"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                  <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                  <Border Grid.ColumnSpan="2" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1"/>
+                  <TextBlock Style="{StaticResource Label}" Text="{DynamicResource s.br.reg}" Margin="0,10,12,10"/>
+                  <TextBlock x:Name="BrowserRegText" Grid.Column="1" TextWrapping="Wrap" Margin="0,10,0,10"/>
+                  <Border Grid.Row="1" Grid.ColumnSpan="2" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1"/>
+                  <TextBlock Grid.Row="1" Style="{StaticResource Label}" Text="{DynamicResource s.br.seen}" Margin="0,10,12,10"/>
+                  <TextBlock x:Name="BrowserSeenText" Grid.Row="1" Grid.Column="1" TextWrapping="Wrap" Typography.NumeralAlignment="Tabular" Margin="0,10,0,10"/>
+                  <Border Grid.Row="2" Grid.ColumnSpan="2" BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1"/>
+                  <TextBlock Grid.Row="2" Style="{StaticResource Label}" Text="{DynamicResource s.br.expected}" Margin="0,10,12,10"/>
+                  <TextBlock x:Name="BrowserExpectedText" Grid.Row="2" Grid.Column="1" TextWrapping="Wrap" Typography.NumeralAlignment="Tabular" Margin="0,10,0,10"/>
+                  <TextBlock Grid.Row="3" Style="{StaticResource Label}" Text="{DynamicResource s.br.appRow}" Margin="0,10,12,10"/>
+                  <TextBlock x:Name="BrowserAppText" Grid.Row="3" Grid.Column="1" Style="{StaticResource Hint}" Margin="0,10,0,10"/>
+                </Grid>
+              </StackPanel>
+            </Grid>
+          </Border>
+          <Border Style="{StaticResource Card}">
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="200"/><ColumnDefinition/></Grid.ColumnDefinitions>
+              <TextBlock Style="{StaticResource Section}" Text="{DynamicResource s.br.setup}" TextWrapping="Wrap" Margin="0,0,16,12"/>
+              <StackPanel Grid.Column="1">
+                <Grid Margin="0,0,0,18">
+                  <Grid.ColumnDefinitions><ColumnDefinition Width="52"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                  <TextBlock Style="{StaticResource Numeral}" Text="1"/>
+                  <StackPanel Grid.Column="1">
+                    <TextBlock Style="{StaticResource Label}" Text="{DynamicResource s.br.step1}"/>
+                    <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource s.br.step1.note}"/>
+                    <WrapPanel Margin="0,10,0,0">
+                      <Button x:Name="BrowserInstallButton" Margin="0,0,8,8"/>
+                      <Button x:Name="BrowserRemoveButton" Style="{StaticResource Ghost}" Content="{DynamicResource s.br.remove}" Margin="0,0,8,8"/>
+                    </WrapPanel>
+                  </StackPanel>
+                </Grid>
+                <Grid Margin="0,0,0,18">
+                  <Grid.ColumnDefinitions><ColumnDefinition Width="52"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                  <TextBlock Style="{StaticResource Numeral}" Text="2"/>
+                  <StackPanel Grid.Column="1">
+                    <TextBlock Style="{StaticResource Label}" Text="{DynamicResource s.br.step2}"/>
+                    <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource s.br.step2.note}"/>
+                    <WrapPanel Margin="0,10,0,0">
+                      <Button x:Name="BrowserOpenChromeButton" Content="{DynamicResource s.br.chrome}" Margin="0,0,8,8"/>
+                    </WrapPanel>
+                  </StackPanel>
+                </Grid>
+                <Grid>
+                  <Grid.ColumnDefinitions><ColumnDefinition Width="52"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                  <TextBlock Style="{StaticResource Numeral}" Text="3"/>
+                  <StackPanel Grid.Column="1">
+                    <TextBlock Style="{StaticResource Label}" Text="{DynamicResource s.br.step3}"/>
+                    <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource s.br.step3.note}"/>
+                    <TextBlock x:Name="BrowserFolderText" FontFamily="Consolas" FontSize="12.5" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                    <WrapPanel Margin="0,10,0,0">
+                      <Button x:Name="BrowserCopyFolderButton" Content="{DynamicResource s.br.copyFolder}" Margin="0,0,8,8"/>
+                      <Button x:Name="BrowserShowFolderButton" Style="{StaticResource Ghost}" Content="{DynamicResource s.br.showFolder}" Margin="0,0,8,8"/>
+                    </WrapPanel>
+                  </StackPanel>
+                </Grid>
+              </StackPanel>
+            </Grid>
+          </Border>
+          <Border Style="{StaticResource Card}">
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="200"/><ColumnDefinition/></Grid.ColumnDefinitions>
+              <TextBlock Style="{StaticResource Section}" Text="{DynamicResource s.br.update}" TextWrapping="Wrap" Margin="0,0,16,12"/>
+              <StackPanel Grid.Column="1">
+                <TextBlock x:Name="BrowserUpdateText" TextWrapping="Wrap"/>
+                <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource s.br.update.note}" Margin="0,6,0,0"/>
+                <WrapPanel Margin="0,12,0,0">
+                  <Button x:Name="BrowserReloadButton" Content="{DynamicResource s.br.reload}" Margin="0,0,8,8"/>
+                </WrapPanel>
+                <TextBlock x:Name="BrowserActionText" Style="{StaticResource AutoHide}" Margin="0,4,0,0" AutomationProperties.LiveSetting="Polite"/>
+              </StackPanel>
+            </Grid>
+          </Border>
+          </StackPanel>
+        </Grid>
+      </ScrollViewer>
+
       <ScrollViewer x:Name="SettingsPage" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed" Focusable="False">
         <Grid Margin="32,0,26,28">
           <!-- Settings: marginal headings on the left grid line, every control on one vertical line to their right. -->
@@ -1124,6 +1270,12 @@
               <StackPanel Grid.Column="1">
               <TextBlock x:Name="AboutText" Style="{StaticResource Hint}"/>
               <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource s.set.about.note}" Margin="0,6,0,0"/>
+              <CheckBox x:Name="CheckUpdatesBox" Content="{DynamicResource s.update.setting}" Margin="0,14,0,0"/>
+              <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource s.update.setting.note}" Margin="30,4,0,0"/>
+              <WrapPanel Margin="0,10,0,0">
+                <Button x:Name="CheckUpdatesButton" Content="{DynamicResource s.update.check}" Margin="0,0,8,8"/>
+              </WrapPanel>
+              <TextBlock x:Name="UpdateStatusText" Style="{StaticResource AutoHide}" Margin="0,2,0,0"/>
               </StackPanel>
             </Grid>
           </Border>

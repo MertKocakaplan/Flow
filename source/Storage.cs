@@ -118,7 +118,7 @@ namespace Flow {
                 SchemaVersion = FlowSettings.CurrentSchema, Language = "system", Theme = "system", Folder = paths.DefaultDownloads,
                 Profile = "compatible", Format = "mp4", Height = 1080, StrictQuality = false, Codec = "h264", FpsLimit = 0,
                 Organize = "none", NameTemplate = DefaultTemplate, Duplicate = "rename", Parallel = 1, Retries = 2, SpeedLimit = 0,
-                AutoPreview = true, ResumeInterrupted = true, MissedSchedule = "start", MinimizeToTray = false, CloseToTray = false, Notify = true,
+                AutoPreview = true, ResumeInterrupted = true, CheckUpdates = true, MissedSchedule = "start", MinimizeToTray = false, CloseToTray = false, Notify = true,
                 CollectionFolder = true, LastTab = "YouTube", TabProfiles = new Dictionary<string, string>()
             };
         }
@@ -147,6 +147,11 @@ namespace Flow {
             if (!has("AutoPreview")) s.AutoPreview = d.AutoPreview;
             if (!has("ResumeInterrupted")) s.ResumeInterrupted = d.ResumeInterrupted;
             if (!has("Notify")) s.Notify = d.Notify;
+            if (!has("CheckUpdates")) s.CheckUpdates = d.CheckUpdates;
+            if (AppUpdates.Clean(s.UpdateVersion) == null) { s.UpdateVersion = null; s.UpdateUrl = null; }
+            if (s.UpdateUrl != null && !AppUpdates.IsReleasePage(s.UpdateUrl)) s.UpdateUrl = null;
+            if (AppUpdates.Clean(s.BrowserSeenVersion) == null) s.BrowserSeenVersion = null;
+            if (!Iso.Parse(s.BrowserSeenAt).HasValue) s.BrowserSeenAt = null;
             if (!has("CollectionFolder")) s.CollectionFolder = d.CollectionFolder;
             if (!new long[] { 0, 262144, 524288, 1048576, 2097152, 5242880, 10485760 }.Contains(s.SpeedLimit)) s.SpeedLimit = 0;
             if (!MissedSchedules.Contains(s.MissedSchedule)) s.MissedSchedule = d.MissedSchedule;

@@ -84,6 +84,14 @@ namespace Flow {
         public string ImportedAt { get; set; }
         public int ImportedCount { get; set; }
         public bool ImportNoticeShown { get; set; }
+        // New Flow releases: checked at most once a day on GitHub; the newest one found is kept for the rail notice.
+        public bool CheckUpdates { get; set; }
+        public string UpdateCheckedAt { get; set; }
+        public string UpdateVersion { get; set; }
+        public string UpdateUrl { get; set; }
+        // The browser extension as last seen through the bridge, so Flow can say so before it calls again.
+        public string BrowserSeenAt { get; set; }
+        public string BrowserSeenVersion { get; set; }
     }
 
     public class HistoryEntry {

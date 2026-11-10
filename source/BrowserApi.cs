@@ -18,6 +18,12 @@ namespace Flow {
         int inspecting;
         sealed class Preview { public string Url,Referrer; public MediaInfo Media; public ImageMetadata Image; public DateTime Expires; public List<Choice> Choices; }
         internal Func<string,string,string,CancellationToken,Task<ImageMetadata>> InspectImage = ImageTransfer.Inspect;
+        // The extension's version as it reports it (1.2.0 and later), the packaged version Flow expects, and a
+        // one-time request to reload from disk.
+        public Action<bool, string> Seen = (ping, version) => {};
+        public Func<string> ExpectedExtension = () => null;
+        public Func<bool> TakeReload = () => false;
+        public Func<bool> OpenDownloads = () => false;
         public sealed class Choice {
             public string key, format, profile, summary, warning;
             public int height;
@@ -30,8 +36,14 @@ namespace Flow {
                 var request = BrowserProtocol.Json().DeserializeObject(json) as Dictionary<string, object>;
                 if (request == null || !request.ContainsKey("v") || Convert.ToString(request["v"], CultureInfo.InvariantCulture) != "1") return BrowserProtocol.Error("PROTOCOL_VERSION");
                 var action = Text(request, "action", 32);
-                object data;
-                if (action == "ping") data = new { version = Program.Version, protocol = 1, capabilities=new[]{"media-discovery","image-original"}, language = Loc.Lang, theme = Theme.Current, folder = settings().Folder, pid = System.Diagnostics.Process.GetCurrentProcess().Id };
+                object data = null;
+                if (action != "ping") Seen(false, null);
+                if (action == "ping") {
+                    var reported = AppUpdates.Clean(OptionalText(request, "ext", 32));
+                    Seen(true, reported);
+                    data = new { version = Program.Version, protocol = 1, capabilities=new[]{"media-discovery","image-original","open-folder"}, language = Loc.Lang, theme = Theme.Current, folder = settings().Folder, pid = System.Diagnostics.Process.GetCurrentProcess().Id,
+                        extension = new { expected = ExpectedExtension(), reload = TakeReload() } };
+                }
                 else if (action == "inspect") {
                     if (inspecting >= 2) return BrowserProtocol.Error("BUSY");
                     var url = Platforms.Parse(Text(request, "url", 8192));
@@ -95,6 +107,8 @@ namespace Flow {
                     else return BrowserProtocol.Error("INVALID_STATE");
                     data = new { jobId = item.Job.Id };
                 } else if (action == "show") { show(); data = new { shown = true }; }
+                // Opens Flow's own download folder. The browser names no path; the folder comes from Flow's settings.
+                else if (action == "folder") { if (!OpenDownloads()) return BrowserProtocol.Error("FOLDER_MISSING"); data = new { opened = true }; }
                 else return BrowserProtocol.Error("INVALID_ACTION");
                 return Success(data);
             } catch (OperationCanceledException) { return BrowserProtocol.Error("TIMEOUT"); }

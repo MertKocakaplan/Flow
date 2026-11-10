@@ -9,6 +9,7 @@ namespace FlowTests {
             ContractTests.Run();
             FixUnit.Run();
             NextUnit.Run();
+            LinkUnit.Run();
         }
     }
 }

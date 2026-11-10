@@ -13,15 +13,30 @@ async function pageTab() {
 }
 let discoveryPanel=null,mediaContext={};
 const currentWindow = await chrome.windows.getCurrent();
-if (!new URLSearchParams(location.search).has('side')) {
-  // Chrome marks a side panel with its own extension context. A popup has a fixed compact width.
-  const contexts = chrome.runtime.getContexts ? await chrome.runtime.getContexts({contextTypes:['POPUP']}) : [];
-  if (contexts.some(c => c.documentId && c.documentUrl === location.href)) document.body.classList.add('popup');
+// Where this page is shown: the toolbar popup, the side panel or a tab (Opera, or when the side panel is refused).
+// The popup and the side panel load the same address and are often open together for a moment (the popup opens the
+// side panel, then closes), so the address cannot tell them apart. The popup finds its own window among the popup
+// views; the side panel does not. A tab has a tab.
+async function surface() {
+  if (new URLSearchParams(location.search).has('side')) return 'side';
+  if (sourceTab != null) return 'tab';
+  try { if (await chrome.tabs.getCurrent?.()) return 'tab'; } catch {}
+  let popups = null;
+  try { popups = chrome.extension?.getViews?.({type:'popup'}) || null; } catch {}
+  if (popups) return popups.includes(globalThis) ? 'popup' : 'side';
+  // Without that list, only an address no side panel shares is taken as the popup.
+  const contexts = chrome.runtime.getContexts ? await chrome.runtime.getContexts({contextTypes:['POPUP','SIDE_PANEL']}) : [];
+  const mine = contexts.filter(c => c.documentUrl === location.href);
+  return mine.length > 0 && mine.every(c => c.contextType === 'POPUP') ? 'popup' : 'side';
 }
+const mode = await surface();
+if (mode === 'popup') document.body.classList.add('popup');
 function translate() {
   t = translator(lang); document.documentElement.lang = lang;
   for (const node of document.querySelectorAll('[data-i18n]')) node.textContent = t(node.getAttribute('data-i18n'));
   $('language').value = lang; $('language').title = t('languageHint');
+  if (extensionInfo) showExtensionUpdate(extensionInfo);
+  layoutButton();
   $('connection').textContent = t(online ? 'connected' : 'offline');
   discoveryPanel?.translate();
 }
@@ -50,9 +65,26 @@ function accept(result, queue = false) {
   feedback(errorText(error, t), true, queue);
   return false;
 }
+// "1.10.0" is newer than "1.9.2": compared part by part.
+function newerVersion(a, b) {
+  const pa = String(a || '').split('.').map(Number), pb = String(b || '').split('.').map(Number);
+  if (!pa.length || pa.some(Number.isNaN)) return false;
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) { const x = pa[i] || 0, y = pb[i] || 0; if (x !== y) return x > y; }
+  return false;
+}
+const ownVersion = chrome.runtime.getManifest?.().version || '';
+// Flow names the version in its package folder; the extension loaded from that folder reloads to pick it up.
+var extensionInfo = null;
+function showExtensionUpdate(extension) {
+  extensionInfo = extension || null;
+  const expected = extension?.expected;
+  const stale = !!expected && newerVersion(expected, ownVersion);
+  $('extUpdate').hidden = !stale;
+  if (stale) $('extUpdateText').textContent = t('extUpdate').replace('{0}', ownVersion).replace('{1}', expected);
+}
 async function connect(launch = false) {
   $('connect').disabled = true;
-  const result = await send('ping', {launch});
+  const result = await send('ping', {launch, ext: ownVersion});
   $('connect').disabled = false;
   if (!result?.ok) { setOnline(false, result?.error || {code:'HOST_DISCONNECTED'}); return; }
   if(!result.data.capabilities?.includes('image-original')){setOnline(false,{code:'APP_UPGRADE'});return;}
@@ -62,6 +94,11 @@ async function connect(launch = false) {
   translate(); document.documentElement.dataset.theme = theme;
   await chrome.storage.local.set({desktopLanguage:result.data.language, desktopTheme:theme});
   $('folder').textContent = result.data.folder || ''; setOnline(true); feedback('');
+  // Older Flow versions cannot open the folder; the button only appears where it works.
+  $('openFolder').hidden = !result.data.capabilities?.includes('open-folder');
+  $('openFolder').title = result.data.folder || '';
+  showExtensionUpdate(result.data.extension);
+  if (result.data.extension?.reload === true) { chrome.runtime.reload?.(); return; }
   await refreshQueue();
 }
 function view(name) {
@@ -178,9 +215,33 @@ $('quality').addEventListener('change',()=>{ submission=null; choiceSummary(); s
 $('download').addEventListener('click',()=>enqueue(false)); $('hold').addEventListener('click',()=>enqueue(true));
 $('downloadTab').addEventListener('click',()=>view('download')); $('queueTab').addEventListener('click',()=>view('queue'));
 $('mediaTab').addEventListener('click',()=>view('media'));
-$('connect').addEventListener('click',()=>connect(true)); $('refresh').addEventListener('click',refreshQueue);
+$('connect').addEventListener('click',()=>connect(true));
+$('extReload').addEventListener('click',()=>chrome.runtime.reload?.()); $('refresh').addEventListener('click',refreshQueue);
+$('openFolder').addEventListener('click',async()=>{ const result = await send('folder'); if (accept(result,true)) feedback('',false,true); });
 $('show').addEventListener('click',async()=>{ accept(await send('show',{launch:true})); });
-$('sidePanel').addEventListener('click',()=>{ if(chrome.sidePanel?.open)chrome.sidePanel.open({windowId:currentWindow.id}).catch(()=>feedback(t('invalid'),true));else chrome.tabs.query({active:true,currentWindow:true}).then(([active])=>chrome.tabs.create({url:chrome.runtime.getURL('panel.html')+(active?.id!=null?'?tab='+active.id:'')})); });
+// The footer button moves Flow to the other layout: from the popup or a tab into the side panel, and from the side
+// panel back to the popup (a tab where the browser cannot open the popup itself).
+function layoutButton() {
+  const button = $('sidePanel');
+  if (mode === 'side') { button.textContent = t('popupMode'); button.title = t('popupModeHint'); }
+  else { button.textContent = t(chrome.sidePanel?.open ? 'sidePanel' : 'openPanel'); button.title = ''; }
+}
+async function openAsTab() {
+  const [active] = await chrome.tabs.query({active:true, currentWindow:true});
+  await chrome.tabs.create({url:chrome.runtime.getURL('panel.html')+(active?.id!=null?'?tab='+active.id:'')});
+}
+$('sidePanel').addEventListener('click',async()=>{
+  if (mode === 'side') {
+    // A popup closes as soon as focus moves, and closing the side panel moves it; so the side panel must close first
+    // and the popup open after. This page ends when the panel closes, so the extension's worker does both.
+    let result = null;
+    try { result = await chrome.runtime.sendMessage({type:'layout', to:'popup', windowId:currentWindow.id}); } catch {}
+    if (!result?.ok) { try { await openAsTab(); globalThis.close(); } catch { feedback(t('invalid'),true); } }
+    return;
+  }
+  if (chrome.sidePanel?.open) { chrome.sidePanel.open({windowId:currentWindow.id}).then(()=>{ if (mode === 'popup') globalThis.close(); }).catch(()=>feedback(t('invalid'),true)); }
+  else openAsTab().catch(()=>feedback(t('invalid'),true));
+});
 $('language').addEventListener('change',async()=>{ lang=$('language').value; await chrome.storage.local.set({language:lang}); translate(); if(preview){const choice=$('quality').value;formats($('format').value);qualities(choice);} refreshQueue(); });
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'session' || !changes.draft) return;
@@ -193,7 +254,17 @@ chrome.storage.onChanged.addListener((changes, area) => {
     if (draft.preview && Date.now() - draft.inspectedAt < 600000) showPreview(draft.preview,draft.choice);
     feedback(''); view('download');
   }
+  autoInspect(draft);
 });
+// A link sent from the video button or the context menu is fetched at once: the click already said "this one".
+// Each request is handled once, whether the panel was open already or opened by that click.
+const handledRequests = new Set();
+async function autoInspect(draft) {
+  if (!draft?.autoInspect || draft.preview || !draft.requestedAt || handledRequests.has(draft.requestedAt)) return;
+  handledRequests.add(draft.requestedAt);
+  if (!online) await connect();
+  if (online && $('url').value.trim() === draft.url) inspect();
+}
 const stored = await chrome.storage.session.get('draft');
 const localPreferences = await chrome.storage.local.get('language');
 if (localPreferences.language) lang = localPreferences.language;
@@ -202,5 +273,7 @@ if (stored.draft) { $('url').value = stored.draft.url || ''; submission = stored
 updateButtons(); await connect();
 discoveryPanel=await initDiscovery({translate:key=>t(key),isOnline:()=>online,openDraft:async draft=>{generation++;clearPreview();mediaContext={kind:draft.kind,referrer:draft.referrer,title:draft.title};$('url').value=draft.url;view('download');await inspect();}});
 if(!$('url').value.trim())view('media');
-if(!chrome.sidePanel?.open)$('sidePanel').textContent=t('openPanel');
+else if(stored.draft?.autoInspect)view('download');
+await autoInspect(stored.draft);
+layoutButton();
 setInterval(()=>{ if(tab==='queue' && document.visibilityState==='visible') refreshQueue(); },2500);

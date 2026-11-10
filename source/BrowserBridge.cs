@@ -83,6 +83,10 @@ namespace Flow {
         internal BrowserApi Browser;
         public void StartBrowserBridge() {
             Browser = new BrowserApi(queue, () => settings, (url, token) => (InfoSource ?? ((u, t) => EngineExecutor.Inspect(u.Url, u.Platform, 0, t,u.Referrer)))(url, token), () => { BringToFront(); ShowPage("queue"); });
+            Browser.Seen = BrowserSeen;
+            Browser.ExpectedExtension = () => ExpectedExtension;
+            Browser.TakeReload = TakeReload;
+            Browser.OpenDownloads = OpenDownloadFolder;
             browserServer = new BrowserPipeServer(paths.DataDir, (json, token) => {
                 var completion = new TaskCompletionSource<string>();
                 if (Window.Dispatcher.HasShutdownStarted) { completion.SetResult(BrowserProtocol.Error("APP_UNAVAILABLE")); return completion.Task; }

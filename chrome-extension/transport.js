@@ -1,5 +1,5 @@
 export const HOST = 'com.flow.downloader';
-const actions = new Set(['ping', 'inspect', 'enqueue', 'queue', 'pause', 'resume', 'retry', 'cancel', 'show']);
+const actions = new Set(['ping', 'inspect', 'enqueue', 'queue', 'pause', 'resume', 'retry', 'cancel', 'show', 'folder']);
 export function validRequest(request) {
   if (!request || request.v !== 1 || !actions.has(request.action)) return false;
   if (request.action === 'inspect' && (typeof request.url !== 'string' || request.url.length > 8192)) return false;

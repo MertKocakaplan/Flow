@@ -5,6 +5,7 @@
   <header><div class="brand"><img src="icons/48.png" width="32" height="32" alt=""><span>Flow</span></div><button id="show" class="quiet" data-i18n="desktop">Masaüstünü aç</button></header>
   <div class="connection"><span id="connection" role="status">Bağlantı kontrol ediliyor…</span><button id="connect" class="text" data-i18n="connect">Bağlan</button></div>
   <div id="setup" class="notice" hidden><p id="setupText"></p><a href="setup.html" target="_blank" rel="noopener" data-i18n="setup">Kurulum ve yardım</a></div>
+  <div id="extUpdate" class="notice" role="status" hidden><p id="extUpdateText"></p><button id="extReload" class="text" type="button" data-i18n="extReload">Eklentiyi şimdi güncelle</button></div>
   <nav aria-label="Flow"><button id="mediaTab" class="tab" aria-pressed="false"><span data-i18n="pageMedia">Sayfadaki medya</span><span id="mediaCount" class="badge">0</span></button><button id="downloadTab" class="tab selected" aria-pressed="true" data-i18n="newDownload">Yeni indirme</button><button id="queueTab" class="tab" aria-pressed="false"><span data-i18n="queue">Kuyruk</span><span id="count" class="badge">0</span></button></nav>
   <main>
     <section id="mediaView" hidden>
@@ -38,7 +39,7 @@
       </article>
     </section>
     <section id="queueView" hidden>
-      <div class="row"><h1 data-i18n="queueTitle">İndirme kuyruğu</h1><button id="refresh" class="text" data-i18n="refresh">Yenile</button></div>
+      <div class="row"><h1 data-i18n="queueTitle">İndirme kuyruğu</h1><button id="openFolder" class="text" type="button" data-i18n="openFolder" hidden>Klasörü aç</button><button id="refresh" class="text" data-i18n="refresh">Yenile</button></div>
       <p class="muted" data-i18n="queueHint">Flow açık kaldığı sürece Chrome’u kapatabilirsiniz.</p>
       <p id="queueFeedback" role="status" aria-live="polite" class="notice" hidden></p>
       <p id="empty" class="empty" data-i18n="empty">Henüz bir indirme yok.</p><div id="jobs"></div><p id="queueLimit" class="muted small" hidden data-i18n="queueLimit">İlk 100 iş gösteriliyor. Tümünü Flow’da açabilirsiniz.</p>

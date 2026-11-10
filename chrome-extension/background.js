@@ -9,28 +9,71 @@ export function openPanel(tabId) {
   try { if(chrome.sidePanel?.open)return chrome.sidePanel.open({tabId}).catch(fallback); } catch {}
   return fallback();
 }
+// From the side panel to the toolbar popup. The panel closes first, because a popup that opens while focus is still
+// moving closes at once. Browsers without sidePanel.close close it by switching it off and on again; where the popup
+// cannot be opened by the extension, Flow opens in a tab instead.
+export async function sidePanelToPopup(windowId) {
+  const [active] = await chrome.tabs.query({active:true, windowId}).catch(() => []);
+  try {
+    if (chrome.sidePanel?.close) await chrome.sidePanel.close({windowId});
+    else {
+      if (active?.id != null) { await chrome.sidePanel.setOptions({tabId:active.id, enabled:false}); await chrome.sidePanel.setOptions({tabId:active.id, enabled:true, path:'panel.html'}); }
+      await chrome.sidePanel.setOptions({enabled:false}); await chrome.sidePanel.setOptions({enabled:true});
+    }
+  } catch {}
+  try { if (!chrome.action?.openPopup) throw Error('no popup'); await chrome.action.openPopup({windowId}); }
+  catch { await chrome.tabs.create({windowId, url:panelUrl+(active?.id!=null?'?tab='+active.id:'')}); }
+}
 const discovery=new Discovery(chrome,openPanel);
 const backgroundWork=fn=>discovery.serial(fn).catch(()=>{});
-chrome.webRequest.onHeadersReceived.addListener(details=>backgroundWork(()=>discovery.network(details)),{urls:['http://*/*','https://*/*'],types:['media','xmlhttprequest','image','other']},['responseHeaders']);
+// Network responses are only watched once the user granted site access for automatic scanning. Without that grant
+// Chrome would not deliver them anyway and lists a warning on the extensions page; a manual scan reads the page's
+// own resource list instead.
+const watchedTypes={urls:['http://*/*','https://*/*'],types:['media','xmlhttprequest','image','other']};
+function onNetwork(details){backgroundWork(()=>discovery.network(details));}
+function watchNetwork(on){
+  const event=chrome.webRequest?.onHeadersReceived;if(!event)return;
+  const listening=event.hasListener?.(onNetwork)===true;
+  if(on&&!listening)event.addListener(onNetwork,watchedTypes,['responseHeaders']);
+  else if(!on&&listening)event.removeListener(onNetwork);
+}
+chrome.permissions.contains({origins:['http://*/*','https://*/*']}).then(watchNetwork).catch(()=>{});
+chrome.permissions.onAdded?.addListener(()=>chrome.permissions.contains({origins:['http://*/*','https://*/*']}).then(watchNetwork).catch(()=>{}));
 chrome.webNavigation.onCommitted.addListener(details=>backgroundWork(()=>discovery.navigate(details)));
 chrome.webNavigation.onHistoryStateUpdated.addListener(details=>backgroundWork(()=>discovery.navigate(details,true)));
 chrome.tabs.onRemoved.addListener(tabId=>backgroundWork(async()=>{delete discovery.tabs[tabId];await discovery.persist();}));
-chrome.permissions.onRemoved.addListener(()=>backgroundWork(async()=>{if(!await chrome.permissions.contains({origins:['http://*/*','https://*/*']}))await discovery.configure(false,discovery.config.overlays);}));
+chrome.permissions.onRemoved.addListener(()=>backgroundWork(async()=>{if(!await chrome.permissions.contains({origins:['http://*/*','https://*/*']})){watchNetwork(false);await discovery.configure(false,discovery.config.overlays);}}));
 discovery.ready.then(()=>discovery.syncRegistration()).catch(()=>{});
 chrome.storage.onChanged.addListener((changes,area)=>{if(area==='local'&&changes.language)backgroundWork(async()=>{discovery.config.language=changes.language.newValue||'tr';for(const id of Object.keys(discovery.tabs)){try{await chrome.tabs.sendMessage(Number(id),{type:'scan-config',...discovery.config,enabled:discovery.config.enabled||discovery.tabs[id].manual});}catch{}}});});
 async function createMenu() {
   await chrome.contextMenus.removeAll();
   chrome.contextMenus.create({id: menuId, title: 'Flow ile indir / Download with Flow', contexts: ['link', 'page', 'video', 'audio'], documentUrlPatterns: ['http://*/*', 'https://*/*']});
 }
-chrome.runtime.onInstalled.addListener(() => { createMenu().catch(() => {}); });
-chrome.runtime.onStartup.addListener(() => { createMenu().catch(() => {}); });
+// Once a minute the extension tells Flow it is here and which version it is; Flow answers with the version in its
+// package and, when the user asked for it, a request to reload from the (updated) folder. Flow is never started.
+const heartbeatAlarm = 'flow-heartbeat';
+export async function heartbeat() {
+  const result = await callNative(chrome, {v: 1, action: 'ping', ext: chrome.runtime.getManifest?.().version, heartbeat: true}, 15000);
+  if (!result?.ok) return result;
+  await chrome.storage.local.set({desktopExtension: result.data?.extension || null}).catch(() => {});
+  if (result.data?.extension?.reload === true) chrome.runtime.reload?.();
+  return result;
+}
+function keepHeartbeat() {
+  // Creating the alarm again would restart its period on every wake-up, so it is made only when missing.
+  chrome.alarms?.get(heartbeatAlarm).then(alarm => { if (!alarm) chrome.alarms.create(heartbeatAlarm, {periodInMinutes: 1}); }).catch(() => {});
+}
+chrome.alarms?.onAlarm.addListener(alarm => { if (alarm.name === heartbeatAlarm) heartbeat().catch(() => {}); });
+keepHeartbeat();
+chrome.runtime.onInstalled.addListener(() => { createMenu().catch(() => {}); heartbeat().catch(() => {}); });
+chrome.runtime.onStartup.addListener(() => { createMenu().catch(() => {}); heartbeat().catch(() => {}); });
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId !== menuId || tab?.id == null) return;
   // Keep the side-panel call in the original user gesture; do not await storage first.
   const opening = openPanel(tab.id);
   const url = info.linkUrl || info.pageUrl || tab.url || info.srcUrl || '';
-  chrome.storage.session.set({draft: {url, preview: null, choice: null, submission: null}}).catch(() => {});
+  chrome.storage.session.set({draft: {url, preview: null, choice: null, submission: null, autoInspect: true, requestedAt: Date.now()}}).catch(() => {});
   opening.catch(() => {});
 });
 
@@ -43,7 +86,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if(!item || item.protected){sendResponse({ok:false});return false;}
     const opening=openPanel(sender.tab.id);
     discovery.serial(async()=>{
-      await chrome.storage.session.set({draft:{url:item.url,referrer:item.pageUrl,title:item.title,preview:null,submission:null}});
+      // The button means "this video": the panel fetches its details at once instead of waiting for a second click.
+      await chrome.storage.session.set({draft:{url:item.url,referrer:item.pageUrl,title:item.title,preview:null,submission:null,autoInspect:true,requestedAt:Date.now()}});
       await opening;return {ok:true};
     }).then(sendResponse).catch(()=>sendResponse({ok:false}));return true;
   }
@@ -55,6 +99,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }).then(sendResponse).catch(()=>sendResponse({ok:false}));return true;
   }
   if (sender.id !== chrome.runtime.id || sender.url?.split('?')[0] !== panelUrl || sender.tab?.url && sender.tab.url.split('?')[0] !== panelUrl) return false;
+  if(message?.type==='layout'&&message.to==='popup'&&Number.isInteger(message.windowId)) {
+    // Answer first: the side panel that asked is closed next and could not receive a later answer.
+    sendResponse({ok:true});
+    setTimeout(()=>sidePanelToPopup(message.windowId).catch(()=>{}),30);
+    return false;
+  }
   if(message?.type==='discovery') {
     discovery.serial(async()=>{
       const tabId=Number(message.tabId);

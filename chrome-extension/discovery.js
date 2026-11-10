@@ -1,6 +1,8 @@
 import {candidate,webUrl,mediaType,MEDIA_LIMIT} from './detection.js';
 import {callNative} from './transport.js';
 export const ALL_SITES=['http://*/*','https://*/*'];
+// The toolbar count wears the cobalt plate of the desktop app and the panel (Theme.cs Accent), white figures.
+export const BADGE_COLOR='#1f3fd1';
 
 export class Discovery {
   constructor(api,openPanel,native=callNative){
@@ -18,7 +20,7 @@ export class Discovery {
     while(new TextEncoder().encode(JSON.stringify(this.tabs)).length>6000000){const oldest=Object.keys(this.tabs).sort((a,b)=>this.tabs[a].updated-this.tabs[b].updated)[0];if(!oldest)break;delete this.tabs[oldest];await this.badge(oldest);}
     await this.api.storage.session.set({discovery:this.tabs});
   }
-  async badge(tabId){const state=this.tabs[tabId],n=state?.items.length||0;try{await this.api.action.setBadgeText({tabId:Number(tabId),text:n?String(n):''});await this.api.action.setBadgeBackgroundColor({tabId:Number(tabId),color:'#0a7a70'});}catch{}}
+  async badge(tabId){const state=this.tabs[tabId],n=state?.items.length||0;try{await this.api.action.setBadgeText({tabId:Number(tabId),text:n?String(n):''});await this.api.action.setBadgeBackgroundColor({tabId:Number(tabId),color:BADGE_COLOR});await this.api.action.setBadgeTextColor?.({tabId:Number(tabId),color:'#ffffff'});}catch{}}
   async ensure(tabId,pageUrl,stamp=Date.now()){
     if(tabId<0 || !webUrl(pageUrl))return null;
     let state=this.tabs[tabId];

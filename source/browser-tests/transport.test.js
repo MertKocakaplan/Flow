@@ -19,7 +19,7 @@ test('manifest keeps its stable ID; automatic site access requires an optional g
   const m=JSON.parse(readFileSync(new URL('../../chrome-extension/manifest.json',import.meta.url)));
   const id=createHash('sha256').update(Buffer.from(m.key,'base64')).digest('hex').slice(0,32).replace(/[0-9a-f]/g,c=>String.fromCharCode(97+parseInt(c,16)));
   assert.equal(id,'eidibhbenooohggnhdeblgfdclahhdnd'); assert.equal(m.manifest_version,3);
-  assert.deepEqual(m.permissions.sort(),['activeTab','contextMenus','nativeMessaging','sidePanel','storage','scripting','webRequest','webNavigation'].sort());
+  assert.deepEqual(m.permissions.sort(),['activeTab','alarms','contextMenus','nativeMessaging','sidePanel','storage','scripting','webRequest','webNavigation'].sort());
   assert.deepEqual(m.optional_host_permissions,['http://*/*','https://*/*']);assert.equal(m.permissions.includes('cookies'),false);
   assert.equal(m.host_permissions,undefined); assert.equal(m.content_scripts,undefined); assert.equal(m.externally_connectable,undefined);
 });
@@ -50,4 +50,9 @@ test('old host protocol does not masquerade as a successful connection',async()=
 });
 test('unresponsive host times out and releases its port',async()=>{
   const m=mock();assert.equal((await callNative(m.api,{v:1,action:'ping'},5)).error.code,'TIMEOUT');assert.equal(m.disconnected,true);
+});
+
+test('the folder action is a known request',async()=>{
+  const {validRequest}=await import('../../chrome-extension/transport.js');
+  assert.equal(validRequest({v:1,action:'folder'}),true);assert.equal(validRequest({v:1,action:'open'}),false);
 });

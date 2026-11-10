@@ -77,7 +77,7 @@ namespace Flow {
             rail.Child = layers;
             SetWindowIcon();
             loading = true;
-            InitNavigation(); InitQueue(executor); InitDownload(); InitHistory(); InitSettings(); InitExtras();
+            InitNavigation(); InitQueue(executor); InitDownload(); InitHistory(); InitSettings(); InitExtras(); InitUpdates(); InitBrowserPage();
             loading = false;
             Loc.Changed += OnLanguageChanged;
             Window.Closed += (s, e) => Loc.Changed -= OnLanguageChanged;
@@ -125,7 +125,7 @@ namespace Flow {
         }
         public void ShowPage(string name) {
             page = name;
-            var map = new Dictionary<string, string> { { "download", "DownloadPage" }, { "queue", "QueuePage" }, { "history", "HistoryPage" }, { "settings", "SettingsPage" } };
+            var map = new Dictionary<string, string> { { "download", "DownloadPage" }, { "queue", "QueuePage" }, { "history", "HistoryPage" }, { "browser", "BrowserPage" }, { "settings", "SettingsPage" } };
             foreach (var pair in map) {
                 var element = C<UIElement>(pair.Value);
                 if (element == null) continue;
@@ -137,8 +137,9 @@ namespace Flow {
             if (nav != null && nav.IsChecked != true) nav.IsChecked = true;
             // The header carries the page title; it follows language changes through the resource reference.
             var title = C<TextBlock>("HeaderEyebrow");
-            if (title != null) title.SetResourceReference(TextBlock.TextProperty, name == "download" ? "s.dl.title" : name == "history" ? "s.hist.title" : name == "settings" ? "s.set.title" : "s.queue.title");
+            if (title != null) title.SetResourceReference(TextBlock.TextProperty, name == "download" ? "s.dl.title" : name == "history" ? "s.hist.title" : name == "settings" ? "s.set.title" : name == "browser" ? "s.br.title" : "s.queue.title");
             if (name == "history") RefreshHistory();
+            if (name == "browser" && C<TextBlock>("BrowserStateTitle") != null) RefreshBrowserLink();
             if (name == "settings") RefreshSettingsInfo();
         }
         public string CurrentPage { get { return page; } }
@@ -147,7 +148,7 @@ namespace Flow {
         void UpdateLayoutMode() {
             compact = Window.ActualWidth > 0 && Window.ActualWidth < 980;
             C<Border>("Sidebar").Width = compact ? 70 : 212;
-            foreach (var name in new[] { "BrandText", "NavDownloadText", "NavHistoryText", "NavSettingsText", "NavQueueText", "VersionText" }) {
+            foreach (var name in new[] { "BrandText", "NavDownloadText", "NavHistoryText", "NavSettingsText", "NavQueueText", "NavBrowserText", "BrowserLinkText", "UpdateNoticeTexts", "VersionText" }) {
                 var element = C<UIElement>(name);
                 if (element != null) element.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
             }
@@ -161,6 +162,7 @@ namespace Flow {
             else if (ctrl && (key == Key.D2 || key == Key.NumPad2)) { ShowPage("queue"); e.Handled = true; }
             else if (ctrl && (key == Key.D3 || key == Key.NumPad3)) { ShowPage("history"); e.Handled = true; }
             else if (ctrl && (key == Key.D4 || key == Key.NumPad4)) { ShowPage("settings"); e.Handled = true; }
+            else if (ctrl && (key == Key.D5 || key == Key.NumPad5)) { ShowPage("browser"); e.Handled = true; }
             else if (ctrl && key == Key.L) { ShowPage("download"); C<TextBox>("UrlBox").Focus(); C<TextBox>("UrlBox").SelectAll(); e.Handled = true; }
             else if (ctrl && key == Key.Enter && page == "download") { e.Handled = true; StartDownload(); }
             else if (key == Key.F5 && page == "download") { e.Handled = true; InspectNow(); }
@@ -180,6 +182,7 @@ namespace Flow {
             RefreshSettingsInfo();
             foreach (var item in queue.Items) item.Refresh();
             UpdateQueueIndicators();
+            ShowUpdateNotice(); RefreshBrowserLink();
             OnLanguageChangedExtra();
         }
         readonly System.Collections.Generic.List<string> ExtraCombos = new System.Collections.Generic.List<string>();
@@ -219,6 +222,14 @@ namespace Flow {
                 if (!Directory.Exists(path)) { ShowMessage(Loc.T("msg.folder.later"), false); return; }
                 Process.Start(new ProcessStartInfo("explorer.exe", Engine.Quote(path)) { UseShellExecute = false });
             } catch (Exception ex) { ShowMessage(ex.Message, true); }
+        }
+        // The default download folder, for the extension's queue. False when it does not exist yet.
+        internal Func<string, bool> FolderOpener = null;
+        internal bool OpenDownloadFolder() {
+            var folder = settings.Folder;
+            if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder)) return false;
+            if (FolderOpener != null) return FolderOpener(folder);
+            try { Process.Start(new ProcessStartInfo("explorer.exe", Engine.Quote(folder)) { UseShellExecute = false }); return true; } catch (Exception) { return false; }
         }
         void Reveal(string path) {
             try {
