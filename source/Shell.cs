@@ -46,6 +46,18 @@ namespace Flow {
         public void Dispose() { icon.Visible = false; icon.Dispose(); menu.Dispose(); }
     }
 
+    // While downloads run the PC does not go to sleep on its own; the screen may still turn off.
+    // The request belongs to the calling thread, so it is always made from the UI thread.
+    public static class Awake {
+        [System.Runtime.InteropServices.DllImport("kernel32.dll")] static extern uint SetThreadExecutionState(uint flags);
+        const uint Continuous = 0x80000000, SystemRequired = 0x00000001;
+        public static bool Held { get; private set; }
+        public static void Hold(bool on) {
+            if (on == Held) return;
+            if (SetThreadExecutionState(on ? Continuous | SystemRequired : Continuous) != 0) Held = on;
+        }
+    }
+
     // Optional Windows Task Scheduler entry that opens Flow for the next scheduled job while it is closed.
     // The task XML uses ISO dates, so it does not depend on the regional date format.
     public interface ITaskRegistrar { void Register(string name, string xml); void Remove(string name); bool Exists(string name); }

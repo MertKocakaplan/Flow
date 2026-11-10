@@ -71,7 +71,7 @@ namespace Flow {
                 var addresses=await Dns.GetHostAddressesAsync(uri.DnsSafeHost);
                 if(addresses.Length==0 || addresses.Any(a=>!PublicAddress(a)))throw new FlowException(ErrorCode.UrlNotPublic);
                 var request=(HttpWebRequest)WebRequest.Create(uri);request.AllowAutoRedirect=false;request.Method=headersOnly?"HEAD":"GET";
-                request.UserAgent="Flow/2.2";request.Timeout=30000;request.ReadWriteTimeout=30000;request.Credentials=null;request.UseDefaultCredentials=false;
+                request.UserAgent="Flow/"+Program.Version;request.Timeout=30000;request.ReadWriteTimeout=30000;request.Credentials=null;request.UseDefaultCredentials=false;
                 request.Referer=Referrer(referer);
                 // The check above and the connection resolve the name separately, so the address really dialled is
                 // checked too. Through a proxy that address is the proxy's, which may rightly be private.

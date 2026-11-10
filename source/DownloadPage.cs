@@ -32,6 +32,8 @@ namespace Flow {
 
             var url = C<TextBox>("UrlBox");
             url.TextChanged += (s, e) => OnUrlChanged();
+            // Several links (one per line, or inside a sentence) are kept as links on one line.
+            DataObject.AddPastingHandler(url, OnUrlPaste);
             url.KeyDown += (s, e) => { if (e.Key == Key.Enter && (Keyboard.Modifiers & ModifierKeys.Control) == 0) { e.Handled = true; InspectNow(); } };
             C<Button>("PasteButton").Click += (s, e) => PasteUrl();
             C<Button>("InspectButton").Click += (s, e) => InspectNow();
@@ -114,9 +116,19 @@ namespace Flow {
         void ShowRedirect(string text) { C<TextBlock>("RedirectText").Text = text; C<Border>("RedirectNote").Visibility = Visibility.Visible; }
         static string PlatformName(Platform p) { return p == Platform.Other ? Loc.T("tab.other") : p.ToString(); }
 
+        void OnUrlPaste(object sender, DataObjectPastingEventArgs e) {
+            var text = e.DataObject.GetDataPresent(DataFormats.UnicodeText) ? e.DataObject.GetData(DataFormats.UnicodeText) as string : null;
+            if (text == null || Platforms.ExtractUrls(text).Count == 0) return;
+            var normalized = Platforms.NormalizePasted(text);
+            if (normalized == text) return;
+            e.CancelCommand();
+            var box = C<TextBox>("UrlBox");
+            box.SelectedText = normalized;
+            box.Select(box.SelectionStart + box.SelectionLength, 0);
+        }
         void PasteUrl() {
             try {
-                if (Clipboard.ContainsText()) { var box = C<TextBox>("UrlBox"); box.Text = Clipboard.GetText().Trim(); box.Focus(); box.CaretIndex = box.Text.Length; }
+                if (Clipboard.ContainsText()) { var box = C<TextBox>("UrlBox"); box.Text = Platforms.NormalizePasted(Clipboard.GetText()); box.Focus(); box.CaretIndex = box.Text.Length; }
                 else ShowMessage(Loc.T("msg.clipboard.empty"), false);
             } catch (Exception) { ShowMessage(Loc.T("msg.clipboard.error"), true); }
         }
@@ -145,7 +157,15 @@ namespace Flow {
         // Only the latest request may update the preview; older results are dropped.
         async void Inspect(bool automatic) {
             UrlInfo url;
-            try { url = Platforms.Parse(C<TextBox>("UrlBox").Text); Engine.EnsureTools(); }
+            // Several links: no single preview; Download adds each as its own job.
+            var links = Platforms.ExtractUrls(C<TextBox>("UrlBox").Text);
+            if (links.Count >= 2) {
+                CancelPreview();
+                C<TextBlock>("VideoTitle").Text = Loc.F("dl.multi.title", links.Count);
+                C<TextBlock>("VideoMeta").Text = Loc.T("dl.multi.meta");
+                return;
+            }
+            try { url = Platforms.Parse(links.Count == 1 ? links[0] : C<TextBox>("UrlBox").Text); Engine.EnsureTools(); }
             catch (Exception ex) { if (!(automatic && ex is FlowException && ((FlowException)ex).Code == ErrorCode.UrlEmpty)) ShowPreviewError(Loc.Error(ex)); return; }
             if (inspected != null && url.Url == inspected.Url && video != null) return;
             if (url.Kind == UrlKind.Collection) { if (collectionUrl == null || collectionUrl.Url != url.Url) OpenCollection(url); return; }
@@ -161,7 +181,7 @@ namespace Flow {
                 ApplyPreview(url, info, generation);
             } catch (OperationCanceledException) {
             } catch (Exception ex) {
-                if (generation == previewGeneration) ShowPreviewError(Loc.Error(ex));
+                if (generation == previewGeneration) { ShowPreviewError(Loc.Error(ex)); OfferEngineUpdate(Errors.FromException(ex), Loc.Error(ex)); }
             } finally {
                 if (generation == previewGeneration) { C<ProgressBar>("PreviewProgress").Visibility = Visibility.Collapsed; if (previewCts == cts) previewCts = null; }
                 cts.Dispose();
@@ -387,10 +407,12 @@ namespace Flow {
         void StartDownload() { Enqueue(false); }
         internal JobItem Enqueue(bool hold) {
             if (CollectionOpen) return EnqueueCollection(hold);
+            var links = Platforms.ExtractUrls(C<TextBox>("UrlBox").Text);
+            if (links.Count >= 2) return EnqueueMany(links, hold);
             UrlInfo url;
             JobOptions options;
             try {
-                url = Platforms.Parse(C<TextBox>("UrlBox").Text);
+                url = Platforms.Parse(links.Count == 1 ? links[0] : C<TextBox>("UrlBox").Text);
                 if (url.Kind == UrlKind.Collection) { OpenCollection(url); return null; }
                 options = CurrentOptions();
                 if (string.IsNullOrWhiteSpace(options.Folder) || !Path.IsPathRooted(options.Folder)) throw new FlowException(ErrorCode.FolderInvalid);
@@ -411,6 +433,31 @@ namespace Flow {
             C<TextBox>("UrlBox").Text = "";
             C<TextBox>("UrlBox").Focus();
             return item;
+        }
+        // Each link becomes its own job with the chosen profile, quality and folder. A time range or subtitle choice
+        // belongs to one video, so it is not applied; lists open their own selection screen and are skipped here.
+        internal JobItem EnqueueMany(List<string> links, bool hold) {
+            JobOptions template;
+            try {
+                template = CurrentOptions();
+                if (string.IsNullOrWhiteSpace(template.Folder) || !Path.IsPathRooted(template.Folder)) throw new FlowException(ErrorCode.FolderInvalid);
+            } catch (Exception ex) { ShowMessage(Loc.Error(ex), true); return null; }
+            int skipped = 0;
+            JobItem last = null; var added = 0;
+            foreach (var link in links) {
+                UrlInfo url;
+                try { url = Platforms.Parse(link); } catch (FlowException) { skipped++; continue; }
+                if (url.Kind == UrlKind.Collection) { skipped++; continue; }
+                var options = template.Copy();
+                options.ClipStart = 0; options.ClipEnd = 0; options.SubLangs = new List<string>();
+                var job = new DownloadJob { Url = url.Url, Platform = url.Platform.ToString(), Options = options, ContentId = url.VideoId };
+                ApplySchedule(job);
+                last = queue.Add(job, hold); added++;
+            }
+            var text = skipped == 0 ? Loc.F("msg.added.many", added) : Loc.F("msg.added.manySkipped", added, skipped);
+            ShowMessage(text, added == 0, added > 0 ? Loc.T("dl.showQueue") : null, added > 0 ? new Action(() => ShowPage("queue")) : null);
+            if (added > 0) { C<TextBox>("UrlBox").Text = ""; C<TextBox>("UrlBox").Focus(); }
+            return last;
         }
         partial void ValidateExtras(JobOptions options);
         partial void ApplySchedule(DownloadJob job);

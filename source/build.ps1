@@ -1,6 +1,13 @@
-# Builds Flow.exe with the C# compiler that ships with Windows (.NET Framework 4.8). No SDK or NuGet needed.
-param([ValidatePattern('^[A-Za-z0-9][A-Za-z0-9._-]*\.exe$')][string]$OutputName = 'Flow.exe', [string]$OutputDir = '')
+# Builds Flow-<version>.exe with the C# compiler that ships with Windows (.NET Framework 4.8). No SDK or NuGet needed.
+# The version comes from BrowserProtocol.AppVersion, the same constant the app and the browser host use.
+param([string]$OutputName = '', [string]$OutputDir = '')
 $ErrorActionPreference = 'Stop'
+if (-not $OutputName) {
+    $version = [regex]::Match([IO.File]::ReadAllText((Join-Path $PSScriptRoot 'BrowserProtocol.cs')), 'AppVersion\s*=\s*"([0-9][0-9.]*)"').Groups[1].Value
+    if (-not $version) { throw 'AppVersion was not found in BrowserProtocol.cs.' }
+    $OutputName = "Flow-$version.exe"
+}
+if ($OutputName -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*\.exe$') { throw "Invalid output name: $OutputName" }
 $framework = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319'
 if (-not $OutputDir) { $OutputDir = Split-Path -Parent $PSScriptRoot }
 $csc = Join-Path $framework 'csc.exe'

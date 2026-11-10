@@ -9,6 +9,7 @@ using System.Windows.Controls;
 namespace Flow {
     public partial class Controller {
         string engineVersion;
+        internal string EngineVersionText { get { return engineVersion; } }
 
         void InitSettings() {
             SelectTag(C<ComboBox>("LanguageBox"), settings.Language);

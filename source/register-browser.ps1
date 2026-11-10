@@ -24,7 +24,9 @@ try {
     $hex = -join ($hash[0..15] | ForEach-Object { $_.ToString('x2') })
     $extensionId = -join ($hex.ToCharArray() | ForEach-Object { [char](97 + [Convert]::ToInt32([string]$_,16)) })
     if ($extensionId -ne 'eidibhbenooohggnhdeblgfdclahhdnd') { throw 'The bundled extension identity does not match the native host.' }
-    foreach ($required in @($hostFile, (Join-Path $PackageRoot 'Flow-2.2.exe'))) { if (-not (Test-Path -LiteralPath $required -PathType Leaf)) { throw "Missing application file: $required" } }
+    $version = [regex]::Match([IO.File]::ReadAllText((Join-Path $PSScriptRoot 'BrowserProtocol.cs')), 'AppVersion\s*=\s*"([0-9][0-9.]*)"').Groups[1].Value
+    if (-not $version) { throw 'AppVersion was not found in BrowserProtocol.cs.' }
+    foreach ($required in @($hostFile, (Join-Path $PackageRoot "Flow-$version.exe"))) { if (-not (Test-Path -LiteralPath $required -PathType Leaf)) { throw "Missing application file: $required" } }
     $manifest = @{ name=$hostName; description='Flow browser companion'; path=$hostFile; type='stdio'; allowed_origins=@("chrome-extension://$extensionId/") }
     if ($Check) {
         Write-Output "Package verified. Extension ID: $extensionId"

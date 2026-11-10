@@ -138,6 +138,7 @@ namespace Flow {
 
         // ---- Taskbar and tray status ----
         partial void UpdateTaskbar(int active, double overall) {
+            if (ShellIntegration) Awake.Hold(active > 0);
             var info = Window.TaskbarItemInfo;
             if (info != null) {
                 if (active == 0) info.ProgressState = TaskbarItemProgressState.None;
@@ -152,13 +153,22 @@ namespace Flow {
             if (status == "canceled") return;
             bool ok = status == "completed" || status == "skipped";
             var title = Loc.T(ok ? "note.done.title" : "note.failed.title");
+            ErrorCode code;
             if (ok) ShowMessage(Loc.F("msg.done.job", item.Title), false, Loc.T("common.reveal"), () => Reveal(item.Job.OutputPath));
-            else ShowMessage(Loc.F("msg.failed.job", item.Title, item.ErrorText), true, Loc.T("dl.showQueue"), () => ShowPage("queue"));
+            else if (!Enum.TryParse(item.Job.Error ?? "", out code) || !OfferEngineUpdate(code, Loc.F("msg.failed.job", item.Title, item.ErrorText)))
+                ShowMessage(Loc.F("msg.failed.job", item.Title, item.ErrorText), true, Loc.T("dl.showQueue"), () => ShowPage("queue"));
             // A Windows notification only when the window is not in front; the in-app notice always stays.
             if (settings.Notify && (!Window.IsActive || !Window.IsVisible)) {
                 Notifications.Add(new[] { title, item.Title });
                 if (ShellIntegration && tray != null) tray.Notify(title, item.Title, !ok);
             }
+        }
+        // An error that an old engine typically causes gets an "Update engine" action instead of the usual one.
+        internal Func<DateTime> UtcToday = () => DateTime.UtcNow;
+        internal bool OfferEngineUpdate(ErrorCode code, string message) {
+            if (!Components.SuggestUpdate(code, engineVersion, UtcToday())) return false;
+            ShowMessage(Loc.F("msg.engine.stale", message, Components.EngineAgeDays(engineVersion, UtcToday())), true, Loc.T("set.engine.update"), () => { ShowPage("settings"); UpdateEngine(); });
+            return true;
         }
         void NotifyNeedsAction(JobItem item) {
             if (!settings.Notify || Window.IsActive) return;
@@ -186,6 +196,7 @@ namespace Flow {
         internal void ExitNow() { ExitFromTray(); }
         partial void OnClosed() {
             SystemEvents.PowerModeChanged -= OnPowerChanged;
+            if (ShellIntegration) Awake.Hold(false);
             if (taskSync != null) taskSync.Stop();
             if (tray != null) { tray.Dispose(); tray = null; }
         }

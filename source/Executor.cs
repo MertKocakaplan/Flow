@@ -149,9 +149,13 @@ namespace Flow {
                 bool got = embed ? probe.SubtitleStreams > 0 : SubtitleFiles(Path.GetDirectoryName(saved), Path.GetFileNameWithoutExtension(saved)).Count > 0;
                 if (!got) subsNote = "note.subsMissing";
             }
+            // The chosen streams were gone when the download started and the engine took the nearest ones; say so,
+            // since the row then shows a resolution or codec other than the one in the preview.
+            string formatNote = FormatChanged(selection, actualFormat) ? "note.formatChanged" : null;
+            var shownNote = formatNote ?? subsNote;
             TryDelete(job.TempDir, job.Id);
             var final = saved; var format = actualFormat ?? selection.Spec;
-            context.Post(() => { item.MarkCompleted(final, format, probe); if (subsNote != null) { job.Note = subsNote; item.Refresh(); } });
+            context.Post(() => { item.MarkCompleted(final, format, probe); if (shownNote != null) { job.Note = shownNote; item.Refresh(); } });
         }
 
         // One engine run. Returns { saved path, actual format }.
@@ -175,7 +179,7 @@ namespace Flow {
                     var snapshot = tracker.Update(progress);
                     // The first event after a resume starts at the bytes already on disk.
                     if (firstProgress) { firstProgress = false; var offset = progress.Downloaded; if (note == "note.resumed" && offset > 0 && progress.Status != "finished") context.Post(() => item.ResumedBytes = offset); }
-                    context.Post(() => item.ApplyProgress(snapshot)); return;
+                    context.Post(() => ShowProgress(item, snapshot)); return;
                 }
                 var post = Engine.ParsePost(line);
                 if (post != null) {
@@ -187,6 +191,13 @@ namespace Flow {
             }, token, 24 * 60 * 60);
             if (result.ExitCode != 0) throw new FlowException(Engine.Classify(result.Error), Engine.Mask(result.Error));
             return new[] { saved, actualFormat };
+        }
+
+        // The engine may run a step before the media download (converting the cover for embedding), which moves the job
+        // to "processing". A transfer event means the download is under way again.
+        public static void ShowProgress(JobItem item, ProgressSnapshot snapshot) {
+            if (item.Job.State != JobState.Downloading) item.SetStage(JobState.Downloading, "stage.download");
+            item.ApplyProgress(snapshot);
         }
 
         internal static void Prepare(string folder) {
@@ -252,6 +263,10 @@ namespace Flow {
             return probe;
         }
 
+        public static bool FormatChanged(Selection selection, string actualFormat) {
+            return !selection.EngineChooses && !string.IsNullOrEmpty(actualFormat) && actualFormat != selection.Spec;
+        }
+
         // "Completed" only after the file really contains what was chosen.
         public static void Verify(JobOptions options, Selection selection, MediaInfo media, ProbeResult probe) {
             Func<string, FlowException> fail = key => new FlowException(ErrorCode.VerifyFailed, key, new[] { key });
@@ -263,6 +278,8 @@ namespace Flow {
             } else {
                 if (!probe.HasVideo) throw fail("verify.noVideo");
                 if (!selection.Silent && !selection.AudioUncertain && !probe.HasAudio) throw fail("verify.noAudio");
+                // "Do not exceed" is checked on the file itself: the engine may have fallen back to another format.
+                if (options.Strict && options.Height > 0 && probe.Width > 0 && probe.Height > 0 && Math.Min(probe.Width, probe.Height) > options.Height) throw fail("verify.quality");
                 if (options.Codec == "h264" && options.Format == "mp4" && (probe.VCodec != "h264" || (probe.HasAudio && probe.ACodec != "aac"))) throw fail("verify.codec");
             }
             double expected = options.HasClip ? options.ClipEnd - options.ClipStart : media.Duration;

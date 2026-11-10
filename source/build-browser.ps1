@@ -2,7 +2,8 @@ param([string]$OutputDir = '')
 $ErrorActionPreference = 'Stop'
 if (-not $OutputDir) { $OutputDir = Split-Path -Parent $PSScriptRoot }
 & (Join-Path $PSScriptRoot 'build-discovery.ps1')
-& (Join-Path $PSScriptRoot 'build.ps1') -OutputName 'Flow-2.2.exe' -OutputDir $OutputDir
+# Same versioned name the browser host launches (BrowserProtocol.ApplicationFile).
+& (Join-Path $PSScriptRoot 'build.ps1') -OutputDir $OutputDir
 $framework = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319'
 $nativeArgs = @('/nologo','/target:exe','/platform:x64','/optimize+','/codepage:65001',"/out:$OutputDir\Flow.BrowserHost.exe",'/reference:System.dll','/reference:System.Core.dll','/reference:System.Web.Extensions.dll',(Join-Path $PSScriptRoot 'BrowserProtocol.cs'),(Join-Path $PSScriptRoot 'native\Main.cs'))
 & (Join-Path $framework 'csc.exe') @nativeArgs

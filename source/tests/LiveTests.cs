@@ -27,6 +27,16 @@ namespace FlowTests {
         }
         // Blocking on the dispatcher thread would deadlock; run the async call elsewhere.
         public static ProbeResult Probe(string path) { return Task.Run(() => EngineExecutor.Probe(path, CancellationToken.None)).GetAwaiter().GetResult(); }
+        // { title tag present, cover picture present } as ffprobe reads the finished file.
+        public static bool[] Embedded(string path) {
+            var r = Task.Run(() => ProcessRunner.Run(Engine.FfprobeExe, new[] { "-v", "error", "-print_format", "json", "-show_format", "-show_streams", path }, null, CancellationToken.None, 60)).GetAwaiter().GetResult();
+            var data = Engine.Json().DeserializeObject(r.Output) as Dictionary<string, object>;
+            var format = data != null && data.ContainsKey("format") ? data["format"] as Dictionary<string, object> : null;
+            var tags = format != null && format.ContainsKey("tags") ? format["tags"] as Dictionary<string, object> : null;
+            bool title = tags != null && tags.Keys.Any(k => k.Equals("title", StringComparison.OrdinalIgnoreCase));
+            bool cover = r.Output.Contains("\"attached_pic\": 1") || r.Output.Contains("\"codec_type\": \"attachment\"");
+            return new[] { title, cover };
+        }
         public static string Describe(JobItem i) { return i.Job.State + (i.Job.Error != null ? " " + i.Job.Error : "") + " " + (i.Job.OutputPath ?? "") + (i.Job.ErrorDetail != null ? " | " + i.Job.ErrorDetail.Split('\n').FirstOrDefault(l => l.Contains("ERROR")) : ""); }
     }
 
@@ -48,7 +58,10 @@ namespace FlowTests {
             var a = RunJob(q, zoo, compat, 240);
             Note("YouTube compatible MP4: " + Describe(a));
             T.Check(a.Job.State == JobState.Completed && File.Exists(a.Job.OutputPath) && a.Job.OutputPath.EndsWith("240p.mp4"), "live: YouTube compatible MP4 completed with quality in the name");
-            if (File.Exists(a.Job.OutputPath)) { var p = Probe(a.Job.OutputPath); T.Check(p.VCodec == "h264" && p.ACodec == "aac" && p.Duration > 17, "live: ffprobe confirms H.264 + AAC and full length"); }
+            if (File.Exists(a.Job.OutputPath)) {
+                var p = Probe(a.Job.OutputPath); T.Check(p.VCodec == "h264" && p.ACodec == "aac" && p.Duration > 17, "live: ffprobe confirms H.264 + AAC and full length");
+                var mp4 = Embedded(a.Job.OutputPath); T.Check(mp4[0] && mp4[1] && p.Width == 320, "live: the MP4 carries its title and cover, and the cover is not taken for the video (" + mp4[0] + "/" + mp4[1] + ")");
+            }
             T.Check(!Directory.Exists(Path.Combine(output, ".flow-parts")), "live: job parts folder removed after success");
 
             var skip = compat.Copy(); skip.Duplicate = "skip";
@@ -67,6 +80,7 @@ namespace FlowTests {
                 var e = RunJob(q, zoo, o, 240);
                 Note("YouTube " + format + ": " + Describe(e));
                 T.Check(e.Job.State == JobState.Completed && e.Job.OutputPath.EndsWith("." + format) && Probe(e.Job.OutputPath).HasAudio, "live: YouTube " + format.ToUpperInvariant() + " verified");
+                if (File.Exists(e.Job.OutputPath)) { var tags = Embedded(e.Job.OutputPath); T.Check(tags[0] && tags[1], "live: the " + format.ToUpperInvariant() + " carries its title and cover (" + tags[0] + "/" + tags[1] + ")"); }
             }
 
             PauseResume(q, root, zoo);

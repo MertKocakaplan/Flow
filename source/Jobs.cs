@@ -102,6 +102,7 @@ namespace Flow {
         public string Spec;
         public bool AudioOnly, Silent, VideoConversion, AudioConversion, AboveLimit, AudioUncertain;
         public bool ConvertIfNeeded;   // codec unknown: checked with ffprobe after download, converted only if needed
+        public bool EngineChooses;     // the chosen ids cannot be passed to the engine; it picks within the same limits
         public long Bytes = -1;
         public bool SizeExact;
         public int Width, Height, ShortSide;
@@ -130,7 +131,22 @@ namespace Flow {
         public static Selection Select(MediaInfo media, JobOptions options) {
             var usable = media.Usable.ToList();
             if (usable.Count == 0) throw new FlowException(ErrorCode.NoVideo);
-            return options.IsAudio ? SelectAudio(media, usable, options) : SelectVideo(media, usable, options);
+            var result = options.IsAudio ? SelectAudio(media, usable, options) : SelectVideo(media, usable, options);
+            GuardSpec(result, options);
+            return result;
+        }
+
+        // The engine's format selector reads spaces, brackets, commas and slashes as syntax, so an id such as
+        // "hls-audio-English (US)" cannot be named. Such a choice is left to the engine within the same limits
+        // (sort order, codec and height), and the user is told before the download.
+        static readonly System.Text.RegularExpressions.Regex SafeId = new System.Text.RegularExpressions.Regex(@"^[A-Za-z0-9_.\-]+$");
+        public static bool IsSafeId(string id) { return id != null && SafeId.IsMatch(id); }
+        static void GuardSpec(Selection result, JobOptions options) {
+            var ids = new[] { result.Video, result.Audio }.Where(f => f != null).Select(f => f.Id).ToList();
+            if (ids.All(IsSafeId)) return;
+            result.EngineChooses = true;
+            result.Spec = Fallback(options);
+            result.Notes.Add("sel.note.engineChooses");
         }
 
         static Selection SelectAudio(MediaInfo media, List<FormatInfo> usable, JobOptions options) {

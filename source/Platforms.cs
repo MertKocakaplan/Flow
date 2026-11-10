@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Web;
@@ -55,6 +56,28 @@ namespace Flow {
             var host = uri.IdnHost.TrimEnd('.').ToLowerInvariant();
             if (!host.Contains(".") || Uri.CheckHostName(host) != UriHostNameType.Dns) return false;
             return !new[] { "localhost", "local", "internal", "lan", "home", "arpa" }.Any(suffix => host == suffix || host.EndsWith("." + suffix, StringComparison.Ordinal));
+        }
+
+        // Links inside pasted text: several lines of links, or a link inside a sentence. Order kept, duplicates dropped.
+        static readonly Regex LinkPattern = new Regex(@"https?://[^\s<>""'“”‘’]+", RegexOptions.IgnoreCase);
+        public const int MaxLinks = 200;
+        public static List<string> ExtractUrls(string text) {
+            var found = new List<string>();
+            foreach (Match m in LinkPattern.Matches(text ?? "")) {
+                var link = m.Value.TrimEnd('.', ',', ';', ':', '!', '?', '»', '›');
+                // A closing bracket belongs to the link only when the link opened one (Wikipedia-style paths).
+                while ((link.EndsWith(")") && link.Count(c => c == '(') < link.Count(c => c == ')')) || (link.EndsWith("]") && !link.Contains("["))) link = link.Substring(0, link.Length - 1).TrimEnd('.', ',', ';', ':', '!', '?');
+                if (link.Length > 10 && !found.Contains(link)) found.Add(link);
+                if (found.Count >= MaxLinks) break;
+            }
+            return found;
+        }
+        // Pasted text that is more than one plain link becomes its links, separated by spaces.
+        public static string NormalizePasted(string text) {
+            var trimmed = (text ?? "").Trim();
+            var links = ExtractUrls(trimmed);
+            if (links.Count == 0 || (links.Count == 1 && links[0] == trimmed)) return trimmed;
+            return string.Join(" ", links);
         }
 
         public static UrlInfo Parse(string value) {

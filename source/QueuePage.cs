@@ -47,6 +47,7 @@ namespace Flow {
                 case "up": queue.Move(item, -1); break;
                 case "down": queue.Move(item, 1); break;
                 case "reveal": Reveal(item.Job.OutputPath); break;
+                case "open": OpenFile(item.Job.OutputPath); break;
                 case "folder": ChooseFolder(path => queue.ChangeFolder(item, path), item.Job.Options.Folder); break;
                 case "format": queue.ChangeFormat(item); break;
                 case "copy":
@@ -86,7 +87,8 @@ namespace Flow {
                 Format = job.Options.Format, Profile = job.Options.Profile, Width = job.Width, Height = job.Height, Duration = job.Duration,
                 Status = status, Error = job.State == JobState.Failed ? job.Error : null, ErrorArgs = job.State == JobState.Failed ? job.ErrorArgs : null, ItemIndex = job.ItemIndex,
                 RequestedCodec = job.Options.Codec, RequestedHeight = job.Options.Height, RequestedFps = job.Options.FpsLimit, RequestedStrict = job.Options.Strict,
-                Clip = job.Options.HasClip ? Naming.ClipTag(job.Options.ClipStart, job.Options.ClipEnd) : null
+                Clip = job.Options.HasClip ? Naming.ClipTag(job.Options.ClipStart, job.Options.ClipEnd) : null,
+                Options = job.Options.Copy(), CollectionTitle = job.CollectionTitle, CollectionIndex = job.CollectionIndex
             });
             if (history.Count > HistoryRules.Limit) history.RemoveRange(HistoryRules.Limit, history.Count - HistoryRules.Limit);
             SaveHistory();

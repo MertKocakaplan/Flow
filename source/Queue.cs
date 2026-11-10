@@ -172,6 +172,7 @@ namespace Flow {
         public bool CanRemove { get { return !IsActive; } }
         public bool CanMove { get { return !JobState.IsFinished(Job.State); } }
         public bool CanReveal { get { return Job.State == JobState.Completed && !string.IsNullOrEmpty(Job.OutputPath); } }
+        public bool CanOpen { get { return CanReveal && Controller.CanOpen(Job.OutputPath); } }
         public bool CanFixFolder { get { var c = Code; return (Job.State == JobState.NeedsAction || Job.State == JobState.Failed) && (c == ErrorCode.WriteDenied || c == ErrorCode.DiskFull || c == ErrorCode.DiskSpaceLow || c == ErrorCode.PathTooLong || c == ErrorCode.FolderInvalid); } }
         public bool CanFixFormat { get { var c = Code; return Job.MediaKind != "image" && (Job.State == JobState.NeedsAction || Job.State == JobState.Failed) && (c == ErrorCode.FormatUnavailable || c == ErrorCode.QualityUnavailable || c == ErrorCode.NoAudio || c == ErrorCode.VerifyFailed); } }
         public bool CanCopy { get { return HasError || log.Length > 0; } }

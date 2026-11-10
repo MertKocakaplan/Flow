@@ -113,6 +113,10 @@ namespace Flow {
         public bool RequestedStrict { get; set; }
         public string Clip { get; set; }
         public int ItemIndex { get; set; }
+        // The job's full option copy (folder, range, subtitles, speed, naming); null on older entries.
+        public JobOptions Options { get; set; }
+        public string CollectionTitle { get; set; }
+        public int CollectionIndex { get; set; }
         public bool Legacy { get; set; }
     }
 

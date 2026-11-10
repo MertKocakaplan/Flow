@@ -25,6 +25,73 @@ namespace FlowTests {
             T.Check(list.Count == 5 && list.Count(x => x.Broken) == 2 && list[0].Name == "20min", "engine extractor list parsed with broken flags");
             T.Check(Sites.Search(list, "band").Count() == 2 && Sites.Search(list, "").Count() == 5, "extractor search");
             T.Check(Sites.Known.Any(s => s.Name == "YouTube" && s.Status == "verified") && Sites.Known.All(s => Loc.Has("site." + s.Status)), "verified-site table has a status text for every entry");
+            VersionContract();
+            Updater();
+        }
+
+        sealed class FakeSource : IEngineSource {
+            public string Tag, Exe, Sums; public int Downloads;
+            public Task<EngineRelease> Latest(CancellationToken token) { return Task.FromResult(new EngineRelease { Tag = Tag, ExeUrl = "fake://exe", SumsUrl = "fake://sums" }); }
+            public Task Download(string url, string target, long maxBytes, CancellationToken token) {
+                Downloads++;
+                if (url == "fake://sums") File.WriteAllText(target, Sums ?? ""); else File.Copy(Exe, target, true);
+                return Task.FromResult(0);
+            }
+        }
+
+        // The engine update is a download checked against the release's SHA-256 list, never the old file's self-updater.
+        static void Updater() {
+            T.Check(Components.IsNewer("2026.10.26", "2026.08.19") && !Components.IsNewer("2026.08.19", "2026.10.26") && !Components.IsNewer("2026.10.26", "2026.10.26") && Components.IsNewer("2026.10.26.123456", "2026.10.26") && !Components.IsNewer("latest", "2026.10.26") && Components.IsNewer("2026.10.26", null), "engine release numbers compared as dates");
+            var a = new string('a', 64); var b = new string('B', 64);
+            T.Check(Components.ExpectedHash(a + "  yt-dlp_x86.exe\n" + b + "  yt-dlp.exe\r\n", "yt-dlp.exe") == b.ToLowerInvariant() && Components.ExpectedHash(a + "  yt-dlp.exe.zip\n", "yt-dlp.exe") == null && Components.ExpectedHash("nonsense", "yt-dlp.exe") == null, "the release checksum list is read for the exact file name");
+
+            T.Check(Components.ToolKind("C:\\t\\backup\\yt-dlp-2026.08.19.exe") == "yt-dlp.exe" && Components.ToolKind("yt-dlp.exe") == "yt-dlp.exe" && Components.ToolKind("ffprobe.exe") == "ffprobe.exe" && Components.ToolKind("other.exe") == "other.exe", "a kept engine copy is still recognised as the engine");
+            var keptCopy = Path.Combine(T.Scratch("kept-engine"), "yt-dlp-2026.01.01.exe");
+            File.Copy(Path.Combine(Engine.ToolsDir, "yt-dlp.exe"), keptCopy);
+            T.Check(Task.Run(() => Components.RunVersion(keptCopy, CancellationToken.None)).GetAwaiter().GetResult() != null, "the version of a kept engine copy can be read, so it can be restored");
+            var nov9 = new DateTime(2026, 11, 9, 23, 0, 0, DateTimeKind.Utc);
+            T.Check(Components.EngineAgeDays("2026.10.26", nov9) == 14 && Components.EngineAgeDays("2026.08.19.123456", nov9) == 82 && Components.EngineAgeDays(null, nov9) == -1 && Components.EngineAgeDays("garbage", nov9) == -1, "engine age read from its release date");
+            T.Check(Components.SuggestUpdate(ErrorCode.Unknown, "2026.08.19", nov9) && Components.SuggestUpdate(ErrorCode.Forbidden, "2026.08.19", nov9), "an engine-shaped error with an old engine suggests updating");
+            T.Check(!Components.SuggestUpdate(ErrorCode.Unknown, "2026.10.26", nov9) && !Components.SuggestUpdate(ErrorCode.Unavailable, "2026.08.19", nov9) && !Components.SuggestUpdate(ErrorCode.DiskFull, "2026.08.19", nov9) && !Components.SuggestUpdate(ErrorCode.Unknown, null, nov9), "a recent engine, an unrelated error or an unknown version suggests nothing");
+
+            var current = Path.Combine(Engine.ToolsDir, "yt-dlp.exe");
+            var real = Task.Run(() => Components.RunVersion(current, CancellationToken.None)).GetAwaiter().GetResult();
+            var tools = T.Scratch("tools-update");
+            var exe = Path.Combine(tools, "yt-dlp.exe");
+            File.Copy(current, exe);
+            var original = Components.Hash(exe);
+            Func<string, CancellationToken, Task<bool>> ok = (e, t) => Task.FromResult(true);
+            Func<IEngineSource, UpdateResult> update = s => Task.Run(() => Components.UpdateEngine(tools, () => 0, ok, null, s, CancellationToken.None)).GetAwaiter().GetResult();
+
+            var same = new FakeSource { Tag = real };
+            var r = update(same);
+            T.Check(!r.Changed && !r.RolledBack && r.NewVersion == real && same.Downloads == 0 && Components.Hash(exe) == original, "an engine already on the latest release is not downloaded again");
+
+            var bad = new FakeSource { Tag = "2099.01.01", Exe = current, Sums = new string('0', 64) + "  yt-dlp.exe\n" };
+            T.Rejects(() => update(bad), ErrorCode.EngineUpdateFailed, "a download that does not match the published checksum is refused");
+            T.Check(Components.Hash(exe) == original && !Directory.Exists(Path.Combine(tools, "update")) && Components.Installed(tools) == null, "after a checksum mismatch nothing is replaced and the staged file is gone");
+
+            var noLine = new FakeSource { Tag = "2099.01.01", Exe = current, Sums = original + "  yt-dlp_linux\n" };
+            T.Rejects(() => update(noLine), ErrorCode.EngineUpdateFailed, "a checksum list without the Windows engine is refused");
+            T.Check(noLine.Downloads == 1, "the engine itself is not downloaded when its checksum is not published");
+
+            var wrong = new FakeSource { Tag = "2099.01.01", Exe = current, Sums = original + "  yt-dlp.exe\n" };
+            var w = update(wrong);
+            T.Check(w.RolledBack && w.NewVersion == real && Components.Hash(exe) == original && Components.Installed(tools) == null, "a verified file that is not the announced release is rolled back");
+            T.Rejects(() => Task.Run(() => Components.UpdateEngine(tools, () => 1, ok, null, same, CancellationToken.None)).GetAwaiter().GetResult(), ErrorCode.UpdateBusy, "no engine update while downloads are active");
+        }
+
+        // One release number: the file the browser host starts, the Windows manifest, the component list and the setup page agree.
+        static void VersionContract() {
+            var version = Flow.Program.Version;
+            var source = Path.Combine(Engine.BaseDir, "source");
+            T.Check(Flow.BrowserIntegration.BrowserProtocol.ApplicationFile == "Flow-" + version + ".exe", "the browser host starts Flow-" + version + ".exe");
+            T.Check(File.ReadAllText(Path.Combine(source, "app.manifest")).Contains("version=\"" + version + ".0.0\""), "app.manifest carries version " + version);
+            T.Check(Components.Load(Engine.ToolsDir).Package == "Flow " + version, "components.json names package Flow " + version);
+            var setup = Path.Combine(Engine.BaseDir, "chrome-extension", "setup.html");
+            T.Check(!File.Exists(setup) || File.ReadAllText(setup).Contains(Flow.BrowserIntegration.BrowserProtocol.ApplicationFile), "the extension setup page names the versioned file");
+            var stamp = typeof(Flow.Program).Assembly.GetName().Version;
+            T.Check(stamp.ToString() == version + ".0.0", "assembly version follows the release number (" + stamp + ")");
         }
     }
 
@@ -89,24 +156,30 @@ namespace FlowTests {
             }
             q.Shutdown();
 
-            // Engine update on a copy of the tools folder: never on the real package.
+            // Engine update on a copy of the tools folder: never on the real package. An older engine kept as a backup
+            // makes the copy out of date, so the real release download and its checksum are exercised.
             var tools = Path.Combine(root, "tools-copy");
             Directory.CreateDirectory(tools);
-            File.Copy(Path.Combine(Engine.ToolsDir, "yt-dlp.exe"), Path.Combine(tools, "yt-dlp.exe"));
-            var original = Components.Hash(Path.Combine(tools, "yt-dlp.exe"));
+            var backups = Components.BackupDir(Engine.ToolsDir);
+            var older = Directory.Exists(backups) ? Directory.GetFiles(backups, "yt-dlp-*.exe").OrderBy(f => File.GetLastWriteTimeUtc(f)).FirstOrDefault() : null;
+            var copied = Path.Combine(tools, "yt-dlp.exe");
+            File.Copy(older ?? Path.Combine(Engine.ToolsDir, "yt-dlp.exe"), copied);
+            var original = Components.Hash(copied);
             Func<string, CancellationToken, Task<bool>> ok = (exe, t) => Task.FromResult(true);
             var result = Task.Run(() => Components.UpdateEngine(tools, () => 0, ok, l => {}, CancellationToken.None)).GetAwaiter().GetResult();
-            Note("Engine update on copy: " + result.OldVersion + " -> " + result.NewVersion + " changed=" + result.Changed + " rolledBack=" + result.RolledBack);
-            T.Check(!result.RolledBack && result.NewVersion != null && (result.Changed ? Components.HasBackup(tools) : true), "live: engine update on a copy runs the official updater and keeps a backup when changed");
+            Note("Engine update on copy: " + result.OldVersion + " -> " + result.NewVersion + " changed=" + result.Changed + " rolledBack=" + result.RolledBack + (older == null ? " (no older engine to start from)" : ""));
+            T.Check(!result.RolledBack && result.NewVersion != null && (older == null || result.Changed), "live: engine update downloads the published release and checks its SHA-256");
             if (result.Changed) {
+                var installed = Components.Installed(tools);
+                T.Check(Components.HasBackup(tools) && installed != null && installed.Version == result.NewVersion && installed.Sha256 == Components.Hash(copied), "live: the installed engine is recorded with its checksum and the previous one is kept");
                 var restored = Task.Run(() => Components.Rollback(tools, CancellationToken.None)).GetAwaiter().GetResult();
-                T.Check(restored == result.OldVersion && Components.Hash(Path.Combine(tools, "yt-dlp.exe")) == original, "live: previous engine restored byte for byte");
+                T.Check(restored == result.OldVersion && Components.Hash(copied) == original, "live: previous engine restored byte for byte");
+                // A new engine that breaks a previously working reference check is rolled back.
+                int calls = 0;
+                Func<string, CancellationToken, Task<bool>> breaks = (exe, t) => Task.FromResult(calls++ == 0);
+                var broken = Task.Run(() => Components.UpdateEngine(tools, () => 0, breaks, l => {}, CancellationToken.None)).GetAwaiter().GetResult();
+                T.Check(broken.RolledBack && Components.Hash(copied) == original && broken.NewVersion == broken.OldVersion, "live: failed post-update check restores the previous engine");
             }
-            // A new engine that breaks a previously working reference check is rolled back.
-            int calls = 0;
-            Func<string, CancellationToken, Task<bool>> breaks = (exe, t) => Task.FromResult(calls++ == 0);
-            var broken = Task.Run(() => Components.UpdateEngine(tools, () => 0, breaks, l => {}, CancellationToken.None)).GetAwaiter().GetResult();
-            T.Check(broken.RolledBack && Components.Hash(Path.Combine(tools, "yt-dlp.exe")) == original && broken.NewVersion == broken.OldVersion, "live: failed post-update check restores the previous engine");
             T.Rejects(() => Task.Run(() => Components.UpdateEngine(tools, () => 1, ok, l => {}, CancellationToken.None)).GetAwaiter().GetResult(), ErrorCode.UpdateBusy, "live: no engine update while downloads are active");
             T.Check(Components.Hash(Path.Combine(Engine.ToolsDir, "yt-dlp.exe")) == Components.Load(Engine.ToolsDir).Components[0].Sha256, "live: the packaged engine was not modified by the tests");
         }

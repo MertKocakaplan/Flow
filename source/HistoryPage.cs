@@ -37,6 +37,7 @@ namespace Flow {
         public string PathText { get { return !string.IsNullOrEmpty(Entry.FilePath) ? Entry.FilePath : Entry.SourceUrl == null ? Loc.T("hist.noSource") : ""; } }
         public string ErrorText { get { ErrorCode code; return Entry.Status == "failed" && Enum.TryParse(Entry.Error ?? "", out code) ? Loc.Error(code, (Entry.ErrorArgs ?? new List<string>()).Cast<object>().ToArray()) : ""; } }
         public bool CanReveal { get { return Exists; } }
+        public bool CanOpen { get { return Exists && Controller.CanOpen(Entry.FilePath); } }
         public bool HasSource { get { return !string.IsNullOrEmpty(Entry.SourceUrl); } }
     }
 
@@ -98,6 +99,7 @@ namespace Flow {
             e.Handled = true;
             switch (Convert.ToString(button.Tag)) {
                 case "reveal": Reveal(row.Entry.FilePath); break;
+                case "open": OpenFile(row.Entry.FilePath); break;
                 case "source": OpenSource(row.Entry.SourceUrl); break;
                 case "requeue": Requeue(row.Entry); break;
                 case "forget": history.Remove(row.Entry); SaveHistory(); RefreshHistory(); break;
@@ -114,13 +116,21 @@ namespace Flow {
         internal JobItem Requeue(HistoryEntry entry) {
             UrlInfo url;
             try { url = Platforms.Parse(entry.SourceUrl); } catch (Exception ex) { ShowMessage(Loc.Error(ex), true); return null; }
-            var options = JobOptions.From(settings);
-            if (SettingsRules.Formats.Contains(entry.Format)) options.Format = entry.Format;
-            if (SettingsRules.Profiles.Contains(entry.Profile)) options.Profile = entry.Profile;
-            if (options.Format == "mkv" && options.Profile == "best") { options.Codec = "auto"; options.Height = 0; }
-            if (entry.RequestedCodec != null) { options.Codec = entry.RequestedCodec; options.Height = entry.RequestedHeight; options.FpsLimit = entry.RequestedFps; options.Strict = entry.RequestedStrict; }
-            if(entry.MediaKind=="image"){options.Format=entry.Format;options.Profile="custom";options.Height=0;options.Codec="auto";}
-            var job = new DownloadJob { Url = url.Url, Platform = entry.Platform ?? url.Platform.ToString(), Title = entry.Title, Channel = entry.Channel, ContentId = entry.ContentId, Duration = entry.Duration, ItemIndex = entry.ItemIndex, Options = options,MediaKind=entry.MediaKind,Referrer=entry.Referrer };
+            JobOptions options;
+            var saved = entry.Options;
+            // Entries written since the full option copy was kept ask for exactly the same job again: folder, range,
+            // subtitles, speed and naming included. Older entries rebuild what they recorded on top of today's settings.
+            if (saved != null && (entry.MediaKind == "image" || SettingsRules.Formats.Contains(saved.Format)) && !string.IsNullOrWhiteSpace(saved.Folder) && Path.IsPathRooted(saved.Folder)) {
+                options = saved.Copy();
+            } else {
+                options = JobOptions.From(settings);
+                if (SettingsRules.Formats.Contains(entry.Format)) options.Format = entry.Format;
+                if (SettingsRules.Profiles.Contains(entry.Profile)) options.Profile = entry.Profile;
+                if (options.Format == "mkv" && options.Profile == "best") { options.Codec = "auto"; options.Height = 0; }
+                if (entry.RequestedCodec != null) { options.Codec = entry.RequestedCodec; options.Height = entry.RequestedHeight; options.FpsLimit = entry.RequestedFps; options.Strict = entry.RequestedStrict; }
+                if(entry.MediaKind=="image"){options.Format=entry.Format;options.Profile="custom";options.Height=0;options.Codec="auto";}
+            }
+            var job = new DownloadJob { Url = url.Url, Platform = entry.Platform ?? url.Platform.ToString(), Title = entry.Title, Channel = entry.Channel, ContentId = entry.ContentId, Duration = entry.Duration, ItemIndex = entry.ItemIndex, Options = options,MediaKind=entry.MediaKind,Referrer=entry.Referrer, CollectionTitle = entry.CollectionTitle, CollectionIndex = entry.CollectionIndex };
             var item = queue.Add(job, false);
             ShowMessage(Loc.F("hist.requeued", item.Title), false, Loc.T("dl.showQueue"), () => ShowPage("queue"));
             return item;

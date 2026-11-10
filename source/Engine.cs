@@ -128,8 +128,17 @@ namespace Flow {
                 "--print", "after_move:" + FilePrefix + "%(filepath)j", "--print", "after_move:" + FormatPrefix + "%(format_id)j", "--no-quiet",
                 "--no-simulate", "--no-overwrites", "--continue", "--no-mtime", "--abort-on-unavailable-fragments",
                 "-P", "home:" + Path.GetFullPath(homeDir), "-P", "temp:" + Path.GetFullPath(tempDir), "-o", Naming.EngineTemplate(baseName) + ".%(ext)s",
-                "-f", selection.Spec + "/" + FormatSelector.Fallback(o)
+                // Ids the engine cannot parse were already replaced by the general selector in FormatSelector.
+                "-f", selection.EngineChooses ? FormatSelector.Fallback(o) : selection.Spec + "/" + FormatSelector.Fallback(o),
+                // Fragmented streams (HLS/DASH) download several pieces at a time.
+                "--concurrent-fragments", "4"
             });
+            // Title, uploader, date and chapters go into the file. When Flow converts or cuts the file itself, its
+            // copy keeps that metadata, but a cover would become an extra picture stream, so the cover is embedded only
+            // when the engine writes the final file.
+            args.AddRange(new[] { "--embed-metadata", "--embed-chapters" });
+            bool flowFinishes = selection.VideoConversion || selection.ConvertIfNeeded || (o.HasClip && job.ClipMethod == "local");
+            if (!flowFinishes) args.AddRange(new[] { "--embed-thumbnail", "--convert-thumbnails", "jpg" });
             var sort = FormatSelector.SortFor(o);
             if (sort != null) args.AddRange(new[] { "-S", sort });
             if (o.IsAudio) args.AddRange(new[] { "-x", "--audio-format", o.Format, "--audio-quality", "0" });

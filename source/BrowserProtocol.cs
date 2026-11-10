@@ -14,7 +14,10 @@ namespace Flow.BrowserIntegration {
         public const int Version = 1;
         public const string HostName = "com.flow.downloader";
         public const string ExtensionId = "eidibhbenooohggnhdeblgfdclahhdnd";
-        public const string ApplicationFile = "Flow-2.2.exe";
+        // The one place the release number lives. The application, the host and the build scripts read it from here,
+        // and the released file carries it in its name: Flow-<version>.exe.
+        public const string AppVersion = "2.2";
+        public const string ApplicationFile = "Flow-" + AppVersion + ".exe";
         public const int MaxRequest = 65536, MaxResponse = 524288;
         public static JavaScriptSerializer Json() { return new JavaScriptSerializer { MaxJsonLength = MaxResponse, RecursionLimit = 24 }; }
         public static bool AllowedOrigin(string origin) { return origin == "chrome-extension://" + ExtensionId + "/" || origin == "chrome-extension://" + ExtensionId; }

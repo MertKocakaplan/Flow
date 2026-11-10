@@ -20,12 +20,12 @@ using System.Windows.Media.Imaging;
 [assembly: AssemblyTitle("Flow")]
 [assembly: AssemblyDescription("Video and audio downloader")]
 [assembly: AssemblyProduct("Flow")]
-[assembly: AssemblyVersion("2.2.0.0")]
-[assembly: AssemblyFileVersion("2.2.0.0")]
+[assembly: AssemblyVersion(Flow.BrowserIntegration.BrowserProtocol.AppVersion + ".0.0")]
+[assembly: AssemblyFileVersion(Flow.BrowserIntegration.BrowserProtocol.AppVersion + ".0.0")]
 [assembly: System.Runtime.Versioning.TargetFramework(".NETFramework,Version=v4.8", FrameworkDisplayName = ".NET Framework 4.8")]
 namespace Flow {
     public static class Program {
-        public const string Version = "2.2";
+        public const string Version = Flow.BrowserIntegration.BrowserProtocol.AppVersion;
         public static bool ScheduledLaunch;
         [STAThread] public static int Main(string[] args) {
             ScheduledLaunch = args != null && args.Contains(ScheduledStart.Argument);
@@ -224,6 +224,17 @@ namespace Flow {
             try {
                 if (string.IsNullOrEmpty(path) || !File.Exists(path)) { ShowMessage(Loc.T("msg.file.missing"), true); return; }
                 Process.Start(new ProcessStartInfo("explorer.exe", "/select," + Engine.Quote(path)) { UseShellExecute = false });
+            } catch (Exception ex) { ShowMessage(ex.Message, true); }
+        }
+
+        // Opens a finished file with the program Windows has for its type. Only media types Flow writes are opened.
+        public static readonly string[] OpenableExtensions = { ".mp4", ".mkv", ".mp3", ".m4a", ".jpg", ".png", ".gif", ".webp", ".avif", ".bmp" };
+        public static bool CanOpen(string path) { return !string.IsNullOrEmpty(path) && OpenableExtensions.Contains(Path.GetExtension(path).ToLowerInvariant()); }
+        void OpenFile(string path) {
+            try {
+                if (string.IsNullOrEmpty(path) || !File.Exists(path)) { ShowMessage(Loc.T("msg.file.missing"), true); return; }
+                if (!CanOpen(path)) return;
+                Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
             } catch (Exception ex) { ShowMessage(ex.Message, true); }
         }
 
