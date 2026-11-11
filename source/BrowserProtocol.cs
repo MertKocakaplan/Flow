@@ -16,7 +16,7 @@ namespace Flow.BrowserIntegration {
         public const string ExtensionId = "eidibhbenooohggnhdeblgfdclahhdnd";
         // The one place the release number lives. The application, the host and the build scripts read it from here,
         // and the released file carries it in its name: Flow-<version>.exe.
-        public const string AppVersion = "2.2";
+        public const string AppVersion = "2.3";
         public const string ApplicationFile = "Flow-" + AppVersion + ".exe";
         public const int MaxRequest = 65536, MaxResponse = 524288;
         public static JavaScriptSerializer Json() { return new JavaScriptSerializer { MaxJsonLength = MaxResponse, RecursionLimit = 24 }; }

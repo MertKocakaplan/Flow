@@ -1,6 +1,6 @@
 {
   "SchemaVersion": 1,
-  "Package": "Flow 2.2",
+  "Package": "Flow 2.3",
   "Components": [
     { "Name": "yt-dlp", "File": "yt-dlp.exe", "Version": "2026.10.26", "Sha256": "f5389d3698ecde4ef06f4e6b1ce0294fe9ac1396228c8990b8d3416d6d177a7d", "License": "yt-dlp-LICENSE", "Source": "https://github.com/yt-dlp/yt-dlp/releases/tag/2026.10.26", "Updatable": true },
     { "Name": "FFmpeg", "File": "ffmpeg.exe", "Version": "9.0.2 essentials (gyan.dev)", "Sha256": "3256173f3f8bffd7df12227c68adf68025edb1832273a9530688a7bb1ed8edec", "License": "ffmpeg-LICENSE", "Source": "https://www.gyan.dev/ffmpeg/builds/", "Updatable": false },
